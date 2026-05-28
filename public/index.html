@@ -170,15 +170,25 @@
   box-shadow:0 4px 20px rgba(80,150,220,0.12),inset 0 1px 0 rgba(255,255,255,0.95);
 }
 .profile-hero{position:relative;overflow:hidden}
-.profile-banner{
-  height:168px;background:linear-gradient(135deg,rgba(30,100,200,0.95) 0%,rgba(120,185,245,0.9) 52%,rgba(210,235,255,0.85) 100%);
-  background-size:cover;background-position:center center;position:relative;
+/* USERBARS */
+.profile-userbars{
+  display:flex;flex-wrap:wrap;gap:3px;
+  padding:10px 14px 8px;
+  background:linear-gradient(180deg,rgba(15,35,70,0.88) 0%,rgba(25,60,120,0.78) 100%);
+  min-height:10px;
 }
-.profile-banner::after{
-  content:'';position:absolute;inset:0;
-  background:linear-gradient(180deg,rgba(20,45,80,0.06) 0%,rgba(20,45,80,0.22) 100%);
-  pointer-events:none;
+.profile-userbars:empty{
+  padding:0;min-height:0;
 }
+.profile-userbar{
+  display:block;line-height:0;border-radius:2px;overflow:hidden;
+  box-shadow:0 1px 3px rgba(0,0,0,0.4);
+  transition:opacity .15s,transform .1s,box-shadow .15s;
+}
+.profile-userbar:hover{opacity:.82;transform:translateY(-1px);box-shadow:0 2px 6px rgba(0,0,0,0.5)}
+.profile-userbar img{display:block;height:19px;width:auto;max-width:350px}
+/* no-link variant */
+div.profile-userbar{cursor:default}
 .profile-body{
   padding:0 18px 18px;position:relative;
   background:linear-gradient(180deg,rgba(255,255,255,0.15) 0%,rgba(255,255,255,0.0) 100%);
@@ -278,10 +288,17 @@
   border:1px solid rgba(255,255,255,0.8);border-bottom-color:rgba(140,195,240,0.3);
   box-shadow:0 2px 8px rgba(80,150,220,0.07),inset 0 1px 0 rgba(255,255,255,0.85);
 }
-.widget-slot h3{
-  font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-light);
-  margin-bottom:8px;font-weight:700;
+.userbar-editor{display:grid;gap:8px;margin-top:8px}
+.userbar-slot{
+  border-radius:8px;padding:8px 10px;
+  background:linear-gradient(180deg,rgba(255,255,255,0.45) 0%,rgba(210,235,255,0.28) 100%);
+  border:1px solid rgba(255,255,255,0.8);border-bottom-color:rgba(140,195,240,0.3);
+  box-shadow:0 2px 8px rgba(80,150,220,0.07),inset 0 1px 0 rgba(255,255,255,0.85);
 }
+.userbar-slot-label{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-light);font-weight:700;margin-bottom:6px}
+.userbar-slot-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.userbar-preview{margin-top:6px;min-height:19px}
+.userbar-preview img{height:19px;display:block;border-radius:2px}
 .widget-slot-grid{
   display:grid;grid-template-columns:1fr 1fr;gap:8px;
 }
@@ -395,6 +412,25 @@ function escHtml(s) {
     .replace(/'/g, '&#39;');
 }
 
+function normalizeUserbars(input) {
+  let ubs = input;
+  if (typeof ubs === 'string') {
+    try { ubs = JSON.parse(ubs); } catch { ubs = []; }
+  }
+  if (!Array.isArray(ubs)) return [];
+  return ubs.map(u => ({
+    img: String(u?.img || '').trim(),
+    href: String(u?.href || '').trim(),
+  })).filter(u => u.img).slice(0, 8);
+}
+
+function previewUserbar(i) {
+  const img = document.getElementById(`ub${i}-img`)?.value.trim();
+  const preview = document.getElementById(`ub${i}-preview`);
+  if (!preview) return;
+  preview.innerHTML = img ? `<img src="${escHtml(img)}" alt="preview">` : '';
+}
+
 function normalizeWidgets(input) {
   let widgets = input;
   if (typeof widgets === 'string') {
@@ -415,14 +451,6 @@ function profileAccent(user) {
 }
 
 function applyProfileMedia(root) {
-  root.querySelectorAll('[data-banner]').forEach((el) => {
-    const banner = String(el.dataset.banner || '').trim();
-    if (banner) {
-      el.style.backgroundImage = `linear-gradient(180deg, rgba(20,45,80,0.08) 0%, rgba(20,45,80,0.22) 100%), url("${banner}")`;
-      el.style.backgroundSize = 'cover';
-      el.style.backgroundPosition = 'center center';
-    }
-  });
   root.querySelectorAll('[data-profile-bg]').forEach((el) => {
     const bg = String(el.dataset.profileBg || '').trim();
     if (bg) {
@@ -589,10 +617,16 @@ async function loadProfile(username) {
   const isMe = d.id === me?.id;
   const accent = profileAccent(d);
   const widgets = normalizeWidgets(d.profile_widgets);
+  const userbars = normalizeUserbars(d.userbars);
   content.innerHTML = `
     <div class="profile-page" data-profile-bg="${escHtml(d.profile_background || '')}" style="--profile-accent:${escHtml(accent)}">
       <div class="profile-hero">
-        <div class="profile-banner" data-banner="${escHtml(d.banner_url || '')}"></div>
+        <div class="profile-userbars">
+          ${userbars.map(ub => ub.href
+            ? `<a class="profile-userbar" href="${escHtml(ub.href)}" target="_blank" rel="noopener noreferrer"><img src="${escHtml(ub.img)}" alt="userbar" loading="lazy"></a>`
+            : `<div class="profile-userbar"><img src="${escHtml(ub.img)}" alt="userbar" loading="lazy"></div>`
+          ).join('')}
+        </div>
         <div class="profile-body">
           <div class="profile-avatar">${getInitial(d.username)}</div>
           <div class="profile-name">${escHtml(d.username)}</div>
@@ -622,6 +656,8 @@ function renderSettings() {
   const widgets = normalizeWidgets(me?.profile_widgets);
   const slotCount = 4;
   const slots = Array.from({ length: slotCount }, (_, i) => widgets[i] || { title: '', image: '', link: '' });
+  const ubSlotCount = 8;
+  const ubSlots = Array.from({ length: ubSlotCount }, (_, i) => normalizeUserbars(me?.userbars)[i] || { img: '', href: '' });
   const content = document.getElementById('content');
   content.innerHTML = `
     <div class="settings">
@@ -632,10 +668,6 @@ function renderSettings() {
 
         <div class="profile-editor-grid">
           <div>
-            <label class="editor-label">Banner Image URL</label>
-            <input id="banner-in" placeholder="https://..." value="${escHtml(me?.banner_url || '')}">
-          </div>
-          <div>
             <label class="editor-label">Profile Background URL</label>
             <input id="bg-in" placeholder="https://..." value="${escHtml(me?.profile_background || '')}">
           </div>
@@ -643,6 +675,22 @@ function renderSettings() {
             <label class="editor-label">Accent Color</label>
             <input id="accent-in" placeholder="#5a9fd4" value="${escHtml(me?.accent_color || '#5a9fd4')}">
           </div>
+        </div>
+
+        <h2>Userbars</h2>
+        <div class="userbar-editor" id="userbar-editor">
+          ${ubSlots.map((ub, i) => `
+            <div class="userbar-slot">
+              <div class="userbar-slot-label">Userbar ${i + 1}</div>
+              <div class="userbar-slot-grid">
+                <input id="ub${i}-img" placeholder="Image URL (gif/png)" value="${escHtml(ub.img || '')}" oninput="previewUserbar(${i})">
+                <input id="ub${i}-href" placeholder="Link URL (optional)" value="${escHtml(ub.href || '')}">
+              </div>
+              <div class="userbar-preview" id="ub${i}-preview">
+                ${ub.img ? `<img src="${escHtml(ub.img)}" alt="preview">` : ''}
+              </div>
+            </div>
+          `).join('')}
         </div>
 
         <h2>Linked Image Cards</h2>
@@ -660,7 +708,7 @@ function renderSettings() {
         </div>
 
         <button class="btn btn-primary" onclick="saveProfile()" style="max-width:180px">Save Changes</button>
-        <div class="save-note">Сохраняется в профиле: баннер, фон, акцент и карточки с картинками.</div>
+        <div class="save-note">Сохраняется в профиле: userbar'ы, фон, акцент и карточки с картинками.</div>
 
         <hr class="settings-divider">
         <h2>Account</h2>
@@ -678,12 +726,19 @@ async function saveProfile() {
     if (title || image || link) widgets.push({ title, image, link });
   }
 
+  const userbars = [];
+  for (let i = 0; i < 8; i++) {
+    const img = document.getElementById(`ub${i}-img`).value.trim();
+    const href = document.getElementById(`ub${i}-href`).value.trim();
+    if (img) userbars.push({ img, href });
+  }
+
   const payload = {
     bio: document.getElementById('bio-in').value,
-    banner_url: document.getElementById('banner-in').value.trim(),
     profile_background: document.getElementById('bg-in').value.trim(),
     accent_color: document.getElementById('accent-in').value.trim(),
     profile_widgets: widgets,
+    userbars,
   };
 
   const d = await api('PATCH', '/api/me', payload);
