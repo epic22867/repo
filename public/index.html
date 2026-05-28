@@ -647,7 +647,7 @@ async function loadProfile(username) {
         <div class="profile-page" data-profile-bg="${escHtml(d.profile_background || '')}" style="--profile-accent:${escHtml(accent)}">
           <div class="profile-hero">
             <div class="profile-body">
-              <div class="profile-avatar">${getInitial(d.username)}</div>
+              <div class="profile-avatar">${d.avatar_url ? `<img src="${escHtml(d.avatar_url)}" alt="avatar" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : getInitial(d.username)}</div>
               <div class="profile-name">${escHtml(d.username)}</div>
               ${d.bio ? `<div class="profile-bio">${escHtml(d.bio)}</div>` : ''}
               <div class="profile-stats">
@@ -694,6 +694,10 @@ function renderSettings() {
         <textarea id="bio-in" placeholder="Your bio...">${escHtml(me?.bio || '')}</textarea>
 
         <div class="profile-editor-grid">
+          <div>
+            <label class="editor-label">Avatar Image URL</label>
+            <input id="avatar-in" placeholder="https://..." value="${escHtml(me?.avatar_url || '')}">
+          </div>
           <div>
             <label class="editor-label">Profile Background URL</label>
             <input id="bg-in" placeholder="https://..." value="${escHtml(me?.profile_background || '')}">
@@ -762,6 +766,7 @@ async function saveProfile() {
 
   const payload = {
     bio: document.getElementById('bio-in').value,
+    avatar_url: document.getElementById('avatar-in').value.trim(),
     profile_background: document.getElementById('bg-in').value.trim(),
     accent_color: document.getElementById('accent-in').value.trim(),
     profile_widgets: widgets,
