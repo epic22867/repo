@@ -2,7 +2,6 @@ import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import pkg from 'pg';
-import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
@@ -11,7 +10,11 @@ const app = express();
 const SECRET = process.env.JWT_SECRET || 'changeme';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const pool = new Pool({ connectionString: process.env.POSTGRES_URL, ssl: { rejectUnauthorized: false } });
+const connStr = process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.POSTGRESQL_URL;
+if (!connStr) { console.error('ERROR: No database URL found. Set DATABASE_URL variable.'); process.exit(1); }
+
+const isInternal = connStr.includes(".railway.internal");
+const pool = new Pool({ connectionString: connStr, ...(isInternal ? {} : { ssl: { rejectUnauthorized: false } }) });
 
 // Init tables
 await pool.query(`
