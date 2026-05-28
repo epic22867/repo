@@ -403,13 +403,15 @@ div.profile-userbar{cursor:default}
 <div id="app"></div>
 
 <script>
-const GITHUB_USER = 'epic22867';
-const GITHUB_REPO = 'repo';
+const GITHUB_USER = 'YOUR_USERNAME';
+const GITHUB_REPO = 'YOUR_REPO';
 const GITHUB_BRANCH = 'main';
 const LOGO_URL = `https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/${GITHUB_BRANCH}/logo/removebg.png`;
 
 const $ = s => document.querySelector(s);
-let token = localStorage.getItem('token'), me = JSON.parse(localStorage.getItem('me') || 'null');
+let token = localStorage.getItem('token');
+const _rawMe = localStorage.getItem('me');
+let me = (_rawMe && _rawMe !== 'undefined') ? JSON.parse(_rawMe) : null;
 let view = 'feed', profileUser = null;
 
 async function api(method, path, body) {
