@@ -49,7 +49,9 @@ await pool.query(`
   CREATE TABLE IF NOT EXISTS posts (
     id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-    content TEXT NOT NULL,
+    content TEXT NOT NULL DEFAULT '',
+    media_url TEXT DEFAULT '',
+    media_type TEXT DEFAULT '',
     created_at TIMESTAMPTZ DEFAULT NOW()
   );
 
@@ -67,14 +69,16 @@ const safeAlterQueries = [
   `ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_theme TEXT DEFAULT 'aero'`,
   `ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_widgets JSONB DEFAULT '[]'::jsonb`,
   `ALTER TABLE users ADD COLUMN IF NOT EXISTS userbars JSONB DEFAULT '[]'::jsonb`,
-  `ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT DEFAULT ''`
+  `ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT DEFAULT ''`,
+  `ALTER TABLE posts ADD COLUMN IF NOT EXISTS media_url TEXT DEFAULT ''`,
+  `ALTER TABLE posts ADD COLUMN IF NOT EXISTS media_type TEXT DEFAULT ''`
 ];
 
 for (const q of safeAlterQueries) {
   await pool.query(q);
 }
 
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '35mb' }));
 app.use(express.static('public'));
 
 app.get('/', (req, res) => {
@@ -179,23 +183,30 @@ app.get('/api/explore', auth, async (req, res) => {
 });
 
 app.post('/api/posts', auth, async (req, res) => {
-  const { content } = req.body;
+  const { content, media_url, media_type } = req.body;
 
-  if (!content?.trim()) {
+  if (!content?.trim() && !media_url) {
     return res.status(400).json({ error: 'Post is empty' });
   }
 
+  // Validate media size (base64 ~33% overhead; 25MB raw → ~34MB base64)
+  if (media_url && media_url.length > 34 * 1024 * 1024) {
+    return res.status(400).json({ error: 'Media too large (max 25 MB)' });
+  }
+
+  const ALLOWED = ['image/png','image/jpeg','image/gif','video/mp4'];
+  if (media_type && !ALLOWED.includes(media_type)) {
+    return res.status(400).json({ error: 'Unsupported media type' });
+  }
+
   const { rows } = await pool.query(
-    `INSERT INTO posts (user_id, content)
-     VALUES ($1, $2)
+    `INSERT INTO posts (user_id, content, media_url, media_type)
+     VALUES ($1, $2, $3, $4)
      RETURNING *`,
-    [req.user.id, content.trim()]
+    [req.user.id, (content || '').trim(), media_url || '', media_type || '']
   );
 
-  res.json({
-    ...rows[0],
-    username: req.user.username
-  });
+  res.json({ ...rows[0], username: req.user.username });
 });
 
 app.delete('/api/posts/:id', auth, async (req, res) => {
