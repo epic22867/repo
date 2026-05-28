@@ -179,8 +179,9 @@
     .picker-btn:hover{background:rgba(100,175,245,0.22)}
     .picker-btn.active{background:rgba(100,175,245,0.28);border-color:rgba(60,140,220,0.55)}
     .picker-popup{
-      position:absolute;bottom:calc(100% + 8px);left:0;z-index:200;
-      width:280px;max-height:260px;
+      position:fixed;
+      z-index:500;
+      width:300px;max-height:320px;
       background:linear-gradient(180deg,rgba(240,250,255,0.97) 0%,rgba(215,235,255,0.96) 100%);
       border:1px solid rgba(255,255,255,0.9);border-bottom-color:rgba(140,195,240,0.6);
       border-radius:12px;
@@ -238,7 +239,7 @@
     .post-emoji{height:20px;width:20px;object-fit:contain;vertical-align:middle;display:inline-block;margin:0 1px}
     /* sticker in posts */
     .post-sticker{max-width:140px;max-height:140px;display:block;margin-top:6px;border-radius:10px}
-    .compose-footer-left{display:flex;gap:6px;align-items:center;position:relative}
+    .compose-footer-left{display:flex;gap:6px;align-items:center}
     .post-btn{
       padding:6px 20px;font-family:inherit;font-size:11.5px;font-weight:600;cursor:pointer;border-radius:14px;
       background:linear-gradient(180deg,rgba(100,175,245,0.95) 0%,rgba(60,140,225,0.9) 49%,rgba(40,120,210,0.95) 50%,rgba(80,160,240,0.9) 100%);
@@ -1078,20 +1079,51 @@ async function switchPickerTab(mode) {
   document.querySelectorAll('.picker-tab')[mode === 'emoji' ? 0 : 1]?.classList.add('active');
   document.getElementById('emoji-btn')?.classList.toggle('active', mode === 'emoji');
   document.getElementById('sticker-btn')?.classList.toggle('active', mode === 'sticker');
+  const triggerBtn = document.getElementById(mode === 'emoji' ? 'emoji-btn' : 'sticker-btn');
+  positionPicker(triggerBtn);
   const body = document.getElementById('picker-body');
   body.innerHTML = `<div class="picker-loading">Loading…</div>`;
   const files = await fetchPickerFiles(mode);
   renderPickerGrid(mode, files, mode);
 }
 
+function positionPicker(triggerBtn) {
+  const popup = document.getElementById('picker-popup');
+  const rect = triggerBtn.getBoundingClientRect();
+  const popupW = 300;
+  const popupH = 320;
+  const margin = 6;
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+
+  // Prefer opening downward; if not enough space, open upward
+  let top, left;
+  if (rect.bottom + popupH + margin <= vh) {
+    top = rect.bottom + margin;
+  } else {
+    top = rect.top - popupH - margin;
+  }
+  // Align left with button, clamp to viewport
+  left = rect.left;
+  if (left + popupW > vw - 8) left = vw - popupW - 8;
+  if (left < 8) left = 8;
+
+  popup.style.top = top + 'px';
+  popup.style.left = left + 'px';
+  popup.style.width = popupW + 'px';
+}
+
 function togglePicker(mode) {
   const popup = document.getElementById('picker-popup');
+  const triggerBtn = document.getElementById(mode === 'emoji' ? 'emoji-btn' : 'sticker-btn');
   if (_pickerOpen === mode && popup.style.display !== 'none') {
     closePicker(); return;
   }
   _pickerOpen = mode;
   document.getElementById('emoji-btn')?.classList.toggle('active', mode === 'emoji');
   document.getElementById('sticker-btn')?.classList.toggle('active', mode === 'sticker');
+  popup.style.display = 'flex';
+  positionPicker(triggerBtn);
   openPicker(mode);
 }
 
