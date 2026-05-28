@@ -201,7 +201,11 @@
   transition:opacity .15s,transform .1s,box-shadow .15s;
 }
 .profile-userbar:hover{opacity:.82;transform:translateX(1px);box-shadow:0 2px 6px rgba(0,0,0,0.5)}
-.profile-userbar img{display:block;height:36px;width:auto;max-width:300px}
+.profile-userbar img{display:block;width:100%;height:auto;max-width:100%}
+.profile-userbars-list{
+  display:flex;flex-direction:column;gap:4px;
+  margin:8px 12px 0;
+}
 /* no-link variant */
 div.profile-userbar{cursor:default}
 .profile-body{
@@ -639,12 +643,6 @@ async function loadProfile(username) {
   const userbars = normalizeUserbars(d.userbars);
   content.innerHTML = `
     <div class="profile-layout">
-      <div class="profile-left-col">
-        ${userbars.map(ub => ub.href
-          ? `<a class="profile-userbar" href="${escHtml(ub.href)}" target="_blank" rel="noopener noreferrer"><img src="${escHtml(ub.img)}" alt="userbar" loading="lazy"></a>`
-          : `<div class="profile-userbar"><img src="${escHtml(ub.img)}" alt="userbar" loading="lazy"></div>`
-        ).join('')}
-      </div>
       <div class="profile-center-col">
         <div class="profile-page" data-profile-bg="${escHtml(d.profile_background || '')}" style="--profile-accent:${escHtml(accent)}">
           <div class="profile-hero">
@@ -668,6 +666,12 @@ async function loadProfile(username) {
         </div>
       </div>
     </div>
+    ${userbars.length ? `<div class="profile-userbars-list">
+      ${userbars.map(ub => ub.href
+        ? `<a class="profile-userbar" href="${escHtml(ub.href)}" target="_blank" rel="noopener noreferrer"><img src="${escHtml(ub.img)}" alt="userbar" loading="lazy"></a>`
+        : `<div class="profile-userbar"><img src="${escHtml(ub.img)}" alt="userbar" loading="lazy"></div>`
+      ).join('')}
+    </div>` : ''}
     <div class="profile-post-shell" id="profile-posts">
       ${d.posts.length ? d.posts.map(p => renderPost({ ...p, username })).join('') : `<div class="empty">No posts yet.</div>`}
     </div>`;
