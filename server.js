@@ -276,36 +276,58 @@ app.get('/api/me', auth, async (req, res) => {
 });
 
 app.patch('/api/me', auth, async (req, res) => {
-  const {
-    bio,
-    banner_url,
-    profile_background,
-    accent_color,
-    profile_theme,
-    profile_widgets
-  } = req.body;
+  try {
+    const {
+      bio,
+      banner_url,
+      profile_background,
+      accent_color,
+      profile_theme,
+      profile_widgets
+    } = req.body || {};
 
-  await pool.query(
-    `UPDATE users
-     SET bio = $1,
-         banner_url = $2,
-         profile_background = $3,
-         accent_color = $4,
-         profile_theme = $5,
-         profile_widgets = $6
-     WHERE id = $7`,
-    [
-      bio || '',
-      banner_url || '',
-      profile_background || '',
-      accent_color || '#4da3ff',
-      profile_theme || 'aero',
-      JSON.stringify(profile_widgets || []),
-      req.user.id
-    ]
-  );
+    const safeWidgets = Array.isArray(profile_widgets)
+      ? profile_widgets.slice(0, 12)
+      : [];
 
-  res.json({ ok: true });
+    await pool.query(
+      `UPDATE users
+       SET bio = $1,
+           banner_url = $2,
+           profile_background = $3,
+           accent_color = $4,
+           profile_theme = $5,
+           profile_widgets = $6::jsonb
+       WHERE id = $7`,
+      [
+        typeof bio === 'string' ? bio.slice(0, 300) : '',
+        typeof banner_url === 'string' ? banner_url.slice(0, 2000) : '',
+        typeof profile_background === 'string' ? profile_background.slice(0, 2000) : '',
+        typeof accent_color === 'string' ? accent_color : '#4da3ff',
+        typeof profile_theme === 'string' ? profile_theme : 'aero',
+        JSON.stringify(safeWidgets),
+        req.user.id
+      ]
+    );
+
+    const { rows } = await pool.query(
+      `SELECT id, username, bio,
+              banner_url,
+              profile_background,
+              accent_color,
+              profile_theme,
+              profile_widgets,
+              created_at
+       FROM users
+       WHERE id=$1`,
+      [req.user.id]
+    );
+
+    res.json({ ok: true, user: rows[0] });
+  } catch (e) {
+    console.error('PROFILE_UPDATE_ERROR', e);
+    res.status(500).json({ error: 'Failed to update profile' });
+  }
 });
 
 app.get('/api/search', auth, async (req, res) => {
