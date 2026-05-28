@@ -123,6 +123,23 @@
     .btn-ghost{background:linear-gradient(180deg,rgba(255,255,255,0.5) 0%,rgba(220,235,250,0.35) 100%);color:var(--text-mid);border-color:rgba(150,195,235,0.5)}
     .err{color:#c0392b;font-size:11px;max-width:260px;text-align:center;background:rgba(255,220,220,0.5);border-radius:4px;padding:4px 8px}
 
+    /* TIMEOUT BANNER */
+    .timeout-banner{
+      margin:10px 12px 0;border-radius:10px;
+      background:linear-gradient(180deg,rgba(255,230,200,0.75) 0%,rgba(255,200,160,0.6) 100%);
+      border:1px solid rgba(240,160,80,0.6);border-bottom-color:rgba(200,120,40,0.4);
+      box-shadow:0 2px 10px rgba(200,120,40,0.15),inset 0 1px 0 rgba(255,255,255,0.8);
+      padding:12px 16px;display:flex;align-items:center;gap:10px;
+      animation:fadeUp .25s ease;
+    }
+    .timeout-icon{font-size:22px;line-height:1;flex-shrink:0}
+    .timeout-text{flex:1;min-width:0}
+    .timeout-text strong{display:block;font-size:12.5px;color:#7a3800;font-weight:700;margin-bottom:2px}
+    .timeout-text span{font-size:11px;color:#a05010}
+    .timeout-compose-block{
+      pointer-events:none;opacity:0.45;user-select:none;
+    }
+
     /* COMPOSE */
     .compose{
       margin:12px 12px 0;border-radius:10px;
@@ -612,6 +629,9 @@ async function loadFeed() {
   document.getElementById('posts').innerHTML = posts.length
     ? posts.map(renderPost).join('')
     : `<div class="empty">Nothing here yet. Be the first to post!</div>`;
+  // Check & display timeout state on feed load
+  await pollTimeoutStatus();
+  startTimeoutPoller();
 }
 
 async function loadExplore() {
@@ -899,7 +919,74 @@ function clearMedia() {
   document.getElementById('media-err').textContent = '';
 }
 
+// ── TIMEOUT STATE ──────────────────────────────────────────────
+let _timeoutState = null; // { expiresAt: Date, reason: string } or null
+let _timeoutInterval = null;
+
+function formatTimeLeft(expiresAt) {
+  const secs = Math.max(0, Math.ceil((new Date(expiresAt) - Date.now()) / 1000));
+  if (secs <= 0) return '0s';
+  const m = Math.floor(secs / 60), s = secs % 60;
+  return m > 0 ? `${m}m ${s}s` : `${s}s`;
+}
+
+function renderTimeoutBanner(expiresAt, reason) {
+  const existing = document.getElementById('timeout-banner');
+  const msg = reason ? `Reason: ${escHtml(reason)}` : 'Please wait before posting again.';
+  const html = `<div class="timeout-banner" id="timeout-banner">
+    <div class="timeout-icon">⏳</div>
+    <div class="timeout-text">
+      <strong>You are timed out — <span id="timeout-countdown">${formatTimeLeft(expiresAt)}</span> remaining</strong>
+      <span>${msg}</span>
+    </div>
+  </div>`;
+  if (existing) { existing.outerHTML = html; }
+  else {
+    const compose = document.querySelector('.compose');
+    if (compose) { compose.insertAdjacentHTML('beforebegin', html); compose.classList.add('timeout-compose-block'); }
+  }
+}
+
+function clearTimeoutBanner() {
+  document.getElementById('timeout-banner')?.remove();
+  document.querySelector('.compose')?.classList.remove('timeout-compose-block');
+}
+
+async function pollTimeoutStatus() {
+  try {
+    const d = await api('GET', '/api/me/timeout');
+    if (d.timedOut) {
+      _timeoutState = { expiresAt: d.expiresAt, reason: d.reason };
+      renderTimeoutBanner(d.expiresAt, d.reason);
+    } else {
+      _timeoutState = null;
+      clearTimeoutBanner();
+    }
+  } catch {}
+}
+
+function startTimeoutPoller() {
+  if (_timeoutInterval) clearInterval(_timeoutInterval);
+  // Countdown tick every second
+  _timeoutInterval = setInterval(() => {
+    const cd = document.getElementById('timeout-countdown');
+    if (_timeoutState && cd) {
+      const left = formatTimeLeft(_timeoutState.expiresAt);
+      cd.textContent = left;
+      if (new Date(_timeoutState.expiresAt) <= Date.now()) {
+        pollTimeoutStatus(); // re-check with server
+      }
+    }
+  }, 1000);
+  // Re-sync with server every 15s
+  setInterval(pollTimeoutStatus, 15000);
+}
+
 async function submitPost() {
+  if (_timeoutState && new Date(_timeoutState.expiresAt) > Date.now()) {
+    renderTimeoutBanner(_timeoutState.expiresAt, _timeoutState.reason);
+    return;
+  }
   const ta = document.getElementById('ta');
   if (!ta.value.trim() && !_pendingMedia) return;
   const btn = document.querySelector('.post-btn');
@@ -908,6 +995,11 @@ async function submitPost() {
   if (_pendingMedia) { body.media_url = _pendingMedia.dataUrl; body.media_type = _pendingMedia.type; }
   const post = await api('POST', '/api/posts', body);
   btn.disabled = false; btn.textContent = 'Post';
+  if (post.error === 'timeout') {
+    _timeoutState = { expiresAt: post.expiresAt, reason: post.reason };
+    renderTimeoutBanner(post.expiresAt, post.reason);
+    return;
+  }
   if (post.error) return;
   ta.value = '';
   clearMedia();
