@@ -168,6 +168,77 @@
     .post-media img{max-width:100%;border-radius:8px;display:block;border:1px solid rgba(100,175,245,0.2)}
     .post-media video{max-width:100%;border-radius:8px;display:block;border:1px solid rgba(100,175,245,0.2)}
     #media-err{font-size:11px;color:#d94f4f;margin-top:4px}
+
+    /* EMOJI & STICKER PICKER */
+    .picker-btn{
+      display:flex;align-items:center;gap:5px;padding:5px 10px;font-family:inherit;font-size:11.5px;
+      font-weight:600;cursor:pointer;border-radius:14px;color:#5a9fd4;
+      background:rgba(100,175,245,0.12);border:1px solid rgba(100,175,245,0.35);
+      transition:all .15s;white-space:nowrap;flex-shrink:0;
+    }
+    .picker-btn:hover{background:rgba(100,175,245,0.22)}
+    .picker-btn.active{background:rgba(100,175,245,0.28);border-color:rgba(60,140,220,0.55)}
+    .picker-popup{
+      position:absolute;bottom:calc(100% + 8px);left:0;z-index:200;
+      width:280px;max-height:260px;
+      background:linear-gradient(180deg,rgba(240,250,255,0.97) 0%,rgba(215,235,255,0.96) 100%);
+      border:1px solid rgba(255,255,255,0.9);border-bottom-color:rgba(140,195,240,0.6);
+      border-radius:12px;
+      box-shadow:0 8px 32px rgba(60,130,210,0.22),inset 0 1px 0 rgba(255,255,255,1);
+      backdrop-filter:blur(16px);
+      display:flex;flex-direction:column;overflow:hidden;
+      animation:fadeUp .18s ease;
+    }
+    .picker-tabs{
+      display:flex;border-bottom:1px solid rgba(140,195,240,0.3);flex-shrink:0;
+    }
+    .picker-tab{
+      flex:1;padding:7px 4px;font-family:inherit;font-size:10.5px;font-weight:700;
+      letter-spacing:.07em;text-transform:uppercase;cursor:pointer;
+      background:none;border:none;color:var(--text-light);transition:all .15s;
+    }
+    .picker-tab.active{
+      color:var(--aero-blue);
+      background:linear-gradient(180deg,rgba(255,255,255,0.6) 0%,rgba(210,235,255,0.4) 100%);
+      box-shadow:inset 0 -2px 0 var(--aero-blue2);
+    }
+    .picker-body{overflow-y:auto;flex:1;padding:8px}
+    .picker-grid{
+      display:grid;grid-template-columns:repeat(auto-fill,minmax(44px,1fr));gap:4px;
+    }
+    .picker-item{
+      display:flex;align-items:center;justify-content:center;
+      border-radius:8px;padding:4px;cursor:pointer;
+      transition:background .12s,transform .1s;
+      border:1px solid transparent;
+      aspect-ratio:1;
+    }
+    .picker-item:hover{
+      background:rgba(100,175,245,0.18);border-color:rgba(100,175,245,0.35);
+      transform:scale(1.08);
+    }
+    .picker-item img{width:34px;height:34px;object-fit:contain;display:block;border-radius:4px}
+    .picker-sticker-grid{
+      display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:6px;
+    }
+    .picker-sticker-item{
+      display:flex;align-items:center;justify-content:center;
+      border-radius:10px;padding:5px;cursor:pointer;
+      transition:background .12s,transform .1s;
+      border:1px solid transparent;aspect-ratio:1;
+    }
+    .picker-sticker-item:hover{
+      background:rgba(100,175,245,0.18);border-color:rgba(100,175,245,0.35);
+      transform:scale(1.05);
+    }
+    .picker-sticker-item img{width:60px;height:60px;object-fit:contain;display:block;border-radius:6px}
+    .picker-loading{padding:24px;text-align:center;color:var(--text-light);font-size:11px}
+    .picker-empty{padding:24px;text-align:center;color:var(--text-light);font-size:11px}
+    /* inline emoji in posts */
+    .post-emoji{height:20px;width:20px;object-fit:contain;vertical-align:middle;display:inline-block;margin:0 1px}
+    /* sticker in posts */
+    .post-sticker{max-width:140px;max-height:140px;display:block;margin-top:6px;border-radius:10px}
+    .compose-footer-left{display:flex;gap:6px;align-items:center;position:relative}
     .post-btn{
       padding:6px 20px;font-family:inherit;font-size:11.5px;font-weight:600;cursor:pointer;border-radius:14px;
       background:linear-gradient(180deg,rgba(100,175,245,0.95) 0%,rgba(60,140,225,0.9) 49%,rgba(40,120,210,0.95) 50%,rgba(80,160,240,0.9) 100%);
@@ -616,10 +687,18 @@ async function loadFeed() {
       </div>
       <div id="media-err"></div>
       <div class="compose-footer">
-        <label class="media-btn" title="Attach image or video">
-          📎 Photo / Video
-          <input type="file" id="media-file" accept="image/png,image/jpeg,image/gif,video/mp4" style="display:none" onchange="handleMediaFile(this)">
-        </label>
+        <div class="compose-footer-left">
+          <label class="media-btn" title="Attach image or video">
+            📎 Photo / Video
+            <input type="file" id="media-file" accept="image/png,image/jpeg,image/gif,video/mp4" style="display:none" onchange="handleMediaFile(this)">
+          </label>
+          <button class="picker-btn" id="emoji-btn" onclick="togglePicker('emoji')" title="Emoji">😊 Emoji</button>
+          <button class="picker-btn" id="sticker-btn" onclick="togglePicker('sticker')" title="Stickers">🎨 Sticker</button>
+          <div id="picker-popup" style="display:none" class="picker-popup">
+            <div class="picker-tabs" id="picker-tabs"></div>
+            <div class="picker-body" id="picker-body"></div>
+          </div>
+        </div>
         <button class="post-btn" onclick="submitPost()">Post</button>
       </div>
     </div>
@@ -846,17 +925,20 @@ function renderPost(p) {
   if (p.media_url) {
     if (p.media_type === 'video/mp4') {
       media = `<div class="post-media"><video src="${p.media_url}" controls preload="metadata" style="max-height:360px"></video></div>`;
+    } else if (p.is_sticker) {
+      media = `<div class="post-media"><img class="post-sticker" src="${p.media_url}" alt="sticker" loading="lazy"></div>`;
     } else {
       media = `<div class="post-media"><img src="${p.media_url}" alt="media" loading="lazy"></div>`;
     }
   }
+  const contentHtml = p.content ? `<div class="post-content">${renderEmojiText(p.content)}</div>` : '';
   return `<div class="post" id="post-${p.id}">
     ${del}
     <div class="post-meta">
       <span class="post-user" onclick="goto('profile','${escHtml(p.username)}')">${escHtml(p.username)}</span>
       <span class="post-time">${timeAgo(p.created_at)}</span>
     </div>
-    ${p.content ? `<div class="post-content">${escHtml(p.content)}</div>` : ''}
+    ${contentHtml}
     ${media}
   </div>`;
 }
@@ -906,7 +988,7 @@ function showMediaPreview(type, src) {
   if (type === 'video/mp4') {
     preview.innerHTML = `<video src="${src}" controls style="max-height:200px;border-radius:8px;max-width:100%"></video>`;
   } else {
-    preview.innerHTML = `<img src="${src}" style="max-height:200px;border-radius:8px;max-width:100%">`;
+    preview.innerHTML = `<img src="${src}" style="max-height:${_pendingMedia?.isSticker ? '100px' : '200px'};border-radius:8px;max-width:100%">`;
   }
   wrap.style.display = 'inline-block';
 }
@@ -919,7 +1001,148 @@ function clearMedia() {
   document.getElementById('media-err').textContent = '';
 }
 
-// ── TIMEOUT STATE ──────────────────────────────────────────────
+// ── EMOJI / STICKER PICKER ────────────────────────────────────
+const GITHUB_API_BASE = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents`;
+const RAW_BASE = `https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/${GITHUB_BRANCH}`;
+
+let _pickerCache = { emoji: null, sticker: null }; // null = not loaded, [] = loaded
+let _pickerOpen = null; // 'emoji' | 'sticker' | null
+
+const IMAGE_EXTS = new Set(['png','gif','jpg','jpeg','webp']);
+
+function pickerFileUrl(folder, filename) {
+  return `${RAW_BASE}/${folder}/${encodeURIComponent(filename)}`;
+}
+
+async function fetchPickerFiles(folder) {
+  if (_pickerCache[folder]) return _pickerCache[folder];
+  try {
+    const r = await fetch(`${GITHUB_API_BASE}/${folder}?ref=${GITHUB_BRANCH}`, {
+      headers: { Accept: 'application/vnd.github+json' }
+    });
+    if (!r.ok) { _pickerCache[folder] = []; return []; }
+    const data = await r.json();
+    const files = (Array.isArray(data) ? data : [])
+      .filter(f => f.type === 'file' && IMAGE_EXTS.has(f.name.split('.').pop().toLowerCase()))
+      .map(f => f.name);
+    _pickerCache[folder] = files;
+    return files;
+  } catch { _pickerCache[folder] = []; return []; }
+}
+
+function emojiTag(filename) {
+  // strip extension for the tag name
+  return ':' + filename.replace(/\.[^.]+$/, '') + ':';
+}
+
+function renderPickerGrid(folder, files, mode) {
+  const body = document.getElementById('picker-body');
+  if (!files.length) {
+    body.innerHTML = `<div class="picker-empty">No ${mode}s found in /${folder}/</div>`;
+    return;
+  }
+  if (mode === 'emoji') {
+    body.innerHTML = `<div class="picker-grid">${files.map(f => {
+      const url = pickerFileUrl(folder, f);
+      const tag = emojiTag(f);
+      return `<div class="picker-item" title="${tag}" onclick="insertEmoji('${tag}')"><img src="${url}" alt="${tag}" loading="lazy"></div>`;
+    }).join('')}</div>`;
+  } else {
+    body.innerHTML = `<div class="picker-sticker-grid">${files.map(f => {
+      const url = pickerFileUrl(folder, f);
+      return `<div class="picker-sticker-item" title="${f}" onclick="insertSticker('${url}', '${f}')"><img src="${url}" alt="${f}" loading="lazy"></div>`;
+    }).join('')}</div>`;
+  }
+}
+
+async function openPicker(mode) {
+  const popup = document.getElementById('picker-popup');
+  const body = document.getElementById('picker-body');
+  const tabs = document.getElementById('picker-tabs');
+
+  // Tabs
+  tabs.innerHTML = `
+    <button class="picker-tab ${mode==='emoji'?'active':''}" onclick="switchPickerTab('emoji')">😊 Emoji</button>
+    <button class="picker-tab ${mode==='sticker'?'active':''}" onclick="switchPickerTab('sticker')">🎨 Stickers</button>`;
+
+  body.innerHTML = `<div class="picker-loading">Loading…</div>`;
+  popup.style.display = 'flex';
+
+  const files = await fetchPickerFiles(mode);
+  renderPickerGrid(mode, files, mode);
+}
+
+async function switchPickerTab(mode) {
+  _pickerOpen = mode;
+  document.querySelectorAll('.picker-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.picker-tab')[mode === 'emoji' ? 0 : 1]?.classList.add('active');
+  document.getElementById('emoji-btn')?.classList.toggle('active', mode === 'emoji');
+  document.getElementById('sticker-btn')?.classList.toggle('active', mode === 'sticker');
+  const body = document.getElementById('picker-body');
+  body.innerHTML = `<div class="picker-loading">Loading…</div>`;
+  const files = await fetchPickerFiles(mode);
+  renderPickerGrid(mode, files, mode);
+}
+
+function togglePicker(mode) {
+  const popup = document.getElementById('picker-popup');
+  if (_pickerOpen === mode && popup.style.display !== 'none') {
+    closePicker(); return;
+  }
+  _pickerOpen = mode;
+  document.getElementById('emoji-btn')?.classList.toggle('active', mode === 'emoji');
+  document.getElementById('sticker-btn')?.classList.toggle('active', mode === 'sticker');
+  openPicker(mode);
+}
+
+function closePicker() {
+  _pickerOpen = null;
+  const popup = document.getElementById('picker-popup');
+  if (popup) popup.style.display = 'none';
+  document.getElementById('emoji-btn')?.classList.remove('active');
+  document.getElementById('sticker-btn')?.classList.remove('active');
+}
+
+// Close picker when clicking outside
+document.addEventListener('click', (e) => {
+  if (!_pickerOpen) return;
+  const popup = document.getElementById('picker-popup');
+  if (!popup) return;
+  const emojiBtn = document.getElementById('emoji-btn');
+  const stickerBtn = document.getElementById('sticker-btn');
+  if (!popup.contains(e.target) && e.target !== emojiBtn && e.target !== stickerBtn
+      && !emojiBtn?.contains(e.target) && !stickerBtn?.contains(e.target)) {
+    closePicker();
+  }
+});
+
+function insertEmoji(tag) {
+  const ta = document.getElementById('ta');
+  if (!ta) return;
+  const start = ta.selectionStart, end = ta.selectionEnd;
+  ta.value = ta.value.slice(0, start) + tag + ta.value.slice(end);
+  ta.selectionStart = ta.selectionEnd = start + tag.length;
+  ta.focus();
+}
+
+function insertSticker(url, filename) {
+  // Stickers post as media_url (image) immediately when user clicks Post
+  _pendingMedia = { dataUrl: url, type: 'image/gif', isSticker: true, filename };
+  showMediaPreview('image/gif', url);
+  closePicker();
+}
+
+// Render :emoji_name: tags in post text as inline images
+function renderEmojiText(text) {
+  return escHtml(text).replace(/:([a-zA-Z0-9_\-]+):/g, (match, name) => {
+    const url = `${RAW_BASE}/emoji/${encodeURIComponent(name)}.gif`;
+    const urlPng = `${RAW_BASE}/emoji/${encodeURIComponent(name)}.png`;
+    // Try gif first, fallback to png via onerror
+    return `<img class="post-emoji" src="${url}" alt="${match}" title="${match}" onerror="this.src='${urlPng}';this.onerror=null">`;
+  });
+}
+
+
 let _timeoutState = null; // { expiresAt: Date, reason: string } or null
 let _timeoutInterval = null;
 
@@ -992,7 +1215,17 @@ async function submitPost() {
   const btn = document.querySelector('.post-btn');
   btn.disabled = true; btn.textContent = 'Posting…';
   const body = { content: ta.value };
-  if (_pendingMedia) { body.media_url = _pendingMedia.dataUrl; body.media_type = _pendingMedia.type; }
+  if (_pendingMedia) {
+    if (_pendingMedia.isSticker) {
+      // Stickers are remote URLs, not base64 — send directly, flag as sticker
+      body.media_url = _pendingMedia.dataUrl;
+      body.media_type = 'image/gif';
+      body.is_sticker = true;
+    } else {
+      body.media_url = _pendingMedia.dataUrl;
+      body.media_type = _pendingMedia.type;
+    }
+  }
   const post = await api('POST', '/api/posts', body);
   btn.disabled = false; btn.textContent = 'Post';
   if (post.error === 'timeout') {
