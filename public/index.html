@@ -164,32 +164,33 @@
     .post-del:hover{color:#c0392b}
 /* PROFILE */
 .profile-page{
-  margin:12px 12px 0;border-radius:14px;overflow:hidden;
+  margin:12px 12px 0;border-radius:0;overflow:hidden;
   background:linear-gradient(180deg,rgba(255,255,255,0.42) 0%,rgba(200,230,255,0.32) 100%);
   border:1px solid rgba(255,255,255,0.85);border-bottom-color:rgba(140,195,240,0.4);
   box-shadow:0 4px 20px rgba(80,150,220,0.12),inset 0 1px 0 rgba(255,255,255,0.95);
 }
-.profile-hero{position:relative;overflow:hidden}
+.profile-hero{position:relative;overflow:hidden;display:flex;flex-direction:row}
 /* USERBARS */
 .profile-userbars{
-  display:flex;flex-wrap:wrap;gap:3px;
-  padding:10px 14px 8px;
+  display:flex;flex-direction:column;flex-wrap:nowrap;gap:3px;
+  padding:10px 8px;
   background:linear-gradient(180deg,rgba(15,35,70,0.88) 0%,rgba(25,60,120,0.78) 100%);
-  min-height:10px;
+  min-width:0;flex-shrink:0;
 }
 .profile-userbars:empty{
-  padding:0;min-height:0;
+  padding:0;min-width:0;
 }
 .profile-userbar{
   display:block;line-height:0;border-radius:2px;overflow:hidden;
   box-shadow:0 1px 3px rgba(0,0,0,0.4);
   transition:opacity .15s,transform .1s,box-shadow .15s;
 }
-.profile-userbar:hover{opacity:.82;transform:translateY(-1px);box-shadow:0 2px 6px rgba(0,0,0,0.5)}
-.profile-userbar img{display:block;height:19px;width:auto;max-width:350px}
+.profile-userbar:hover{opacity:.82;transform:translateX(1px);box-shadow:0 2px 6px rgba(0,0,0,0.5)}
+.profile-userbar img{display:block;height:19px;width:auto;max-width:200px}
 /* no-link variant */
 div.profile-userbar{cursor:default}
 .profile-body{
+  flex:1;min-width:0;
   padding:0 18px 18px;position:relative;
   background:linear-gradient(180deg,rgba(255,255,255,0.15) 0%,rgba(255,255,255,0.0) 100%);
 }
@@ -454,9 +455,10 @@ function applyProfileMedia(root) {
   root.querySelectorAll('[data-profile-bg]').forEach((el) => {
     const bg = String(el.dataset.profileBg || '').trim();
     if (bg) {
-      el.style.backgroundImage = `linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(245,250,255,0.58) 100%), url("${bg}")`;
-      el.style.backgroundSize = 'cover';
-      el.style.backgroundPosition = 'center center';
+      document.body.style.backgroundImage = `url("${bg}")`;
+      document.body.style.backgroundSize = 'cover';
+      document.body.style.backgroundPosition = 'center center';
+      document.body.style.backgroundAttachment = 'fixed';
     }
   });
 }
@@ -475,6 +477,7 @@ async function verifyToken() {
 }
 
 function render() {
+  document.body.style.backgroundImage = '';
   const app = document.getElementById('app');
   if (!token) { app.innerHTML = renderAuth(); return bindAuth(); }
   app.innerHTML = renderShell();
