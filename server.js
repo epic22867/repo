@@ -34,6 +34,7 @@ await pool.query(`
     profile_theme TEXT DEFAULT 'aero',
     profile_widgets JSONB DEFAULT '[]'::jsonb,
     userbars JSONB DEFAULT '[]'::jsonb,
+    avatar_url TEXT DEFAULT '',
     created_at TIMESTAMPTZ DEFAULT NOW()
   );
 
@@ -57,7 +58,8 @@ const safeAlterQueries = [
   `ALTER TABLE users ADD COLUMN IF NOT EXISTS accent_color TEXT DEFAULT '#4da3ff'`,
   `ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_theme TEXT DEFAULT 'aero'`,
   `ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_widgets JSONB DEFAULT '[]'::jsonb`,
-  `ALTER TABLE users ADD COLUMN IF NOT EXISTS userbars JSONB DEFAULT '[]'::jsonb`
+  `ALTER TABLE users ADD COLUMN IF NOT EXISTS userbars JSONB DEFAULT '[]'::jsonb`,
+  `ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT DEFAULT ''`
 ];
 
 for (const q of safeAlterQueries) {
@@ -94,7 +96,7 @@ app.post('/api/register', async (req, res) => {
       `INSERT INTO users (username, password)
        VALUES ($1, $2)
        RETURNING id, username, bio, banner_url, profile_background,
-       accent_color, profile_theme, profile_widgets, userbars, created_at`,
+       accent_color, profile_theme, profile_widgets, userbars, avatar_url, created_at`,
       [username, hash]
     );
 
@@ -206,6 +208,7 @@ app.get('/api/users/:username', auth, async (req, res) => {
             profile_theme,
             profile_widgets,
             userbars,
+            avatar_url,
             created_at
      FROM users
      WHERE username=$1`,
@@ -266,6 +269,7 @@ app.get('/api/me', auth, async (req, res) => {
             profile_theme,
             profile_widgets,
             userbars,
+            avatar_url,
             created_at
      FROM users
      WHERE id=$1`,
@@ -288,7 +292,8 @@ app.patch('/api/me', auth, async (req, res) => {
       accent_color,
       profile_theme,
       profile_widgets,
-      userbars
+      userbars,
+      avatar_url
     } = req.body || {};
 
     const safeWidgets = Array.isArray(profile_widgets)
@@ -307,8 +312,9 @@ app.patch('/api/me', auth, async (req, res) => {
            accent_color = $4,
            profile_theme = $5,
            profile_widgets = $6::jsonb,
-           userbars = $7::jsonb
-       WHERE id = $8`,
+           userbars = $7::jsonb,
+           avatar_url = $8
+       WHERE id = $9`,
       [
         typeof bio === 'string' ? bio.slice(0, 300) : '',
         typeof banner_url === 'string' ? banner_url.slice(0, 2000) : '',
@@ -317,6 +323,7 @@ app.patch('/api/me', auth, async (req, res) => {
         typeof profile_theme === 'string' ? profile_theme : 'aero',
         JSON.stringify(safeWidgets),
         JSON.stringify(safeUserbars),
+        typeof avatar_url === 'string' ? avatar_url.slice(0, 2000) : '',
         req.user.id
       ]
     );
@@ -329,6 +336,7 @@ app.patch('/api/me', auth, async (req, res) => {
               profile_theme,
               profile_widgets,
               userbars,
+              avatar_url,
               created_at
        FROM users
        WHERE id=$1`,
