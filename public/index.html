@@ -169,16 +169,16 @@
   border:1px solid rgba(255,255,255,0.85);border-bottom-color:rgba(140,195,240,0.4);
   box-shadow:0 4px 20px rgba(80,150,220,0.12),inset 0 1px 0 rgba(255,255,255,0.95);
 }
-.profile-hero{position:relative;overflow:hidden;display:flex;flex-direction:row}
+.profile-hero{position:relative;overflow:hidden;display:flex;flex-direction:row;align-items:flex-start}
 /* USERBARS */
 .profile-userbars{
   display:flex;flex-direction:column;flex-wrap:nowrap;gap:3px;
-  padding:10px 8px;
+  padding:8px 6px;
   background:linear-gradient(180deg,rgba(15,35,70,0.88) 0%,rgba(25,60,120,0.78) 100%);
-  min-width:0;flex-shrink:0;
+  flex-shrink:0;align-self:flex-start;
 }
 .profile-userbars:empty{
-  padding:0;min-width:0;
+  padding:0;display:none;
 }
 .profile-userbar{
   display:block;line-height:0;border-radius:2px;overflow:hidden;
