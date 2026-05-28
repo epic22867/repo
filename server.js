@@ -10,9 +10,17 @@ const app = express();
 const SECRET = process.env.JWT_SECRET || 'changeme';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const connStr = process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.POSTGRESQL_URL;
+const connStr = (() => {
+  const internal = process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.POSTGRESQL_URL;
+  const pub = process.env.DATABASE_PUBLIC_URL || process.env.POSTGRES_PUBLIC_URL;
+  // Prefer public URL if internal hostname is a .railway.internal address,
+  // since private networking may not be available in all Railway environments.
+  if (internal && internal.includes('.railway.internal') && pub) return pub;
+  return internal || pub;
+})();
+
 if (!connStr) {
-  console.error('ERROR: No database URL found. Set DATABASE_URL variable.');
+  console.error('ERROR: No database URL found. Set DATABASE_URL or DATABASE_PUBLIC_URL variable.');
   process.exit(1);
 }
 
@@ -371,4 +379,5 @@ app.get('/api/search', auth, async (req, res) => {
 
 app.listen(process.env.PORT || 3000, () => {
   console.log('Listening on', process.env.PORT || 3000);
+  console.log('DB host:', connStr.replace(/\/\/.*@/, '//***@'));
 });
