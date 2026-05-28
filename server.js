@@ -1,383 +1,834 @@
-import express from 'express';
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import pkg from 'pg';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Aero World</title>
+  <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@300;400;600;700&family=Trebuchet+MS&display=swap" rel="stylesheet">
+  <style>
+    *{margin:0;box-sizing:border-box}
+    :root{
+      --sky1:#c8dff5;--sky2:#a0c4e8;--sky3:#6aaad4;
+      --glass-bg:rgba(255,255,255,0.35);
+      --glass-border:rgba(255,255,255,0.75);
+      --glass-shadow:rgba(100,160,220,0.25);
+      --aero-blue:#1e6bbf;--aero-blue2:#3a8ee6;
+      --text-dark:#1a2a3a;--text-mid:#3a5070;--text-light:#5a7090;
+      --btn-top:rgba(255,255,255,0.95);--btn-bot:rgba(180,215,250,0.8);
+      --active-top:rgba(120,185,245,0.95);--active-bot:rgba(50,130,210,0.9);
+    }
+    body{
+      font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;
+      background:linear-gradient(160deg,#b8d8f5 0%,#d0e8f8 30%,#e8f3fc 55%,#cce0f5 80%,#a8cce8 100%);
+      min-height:100vh;color:var(--text-dark);font-size:13px;
+      background-attachment:fixed;
+    }
+    /* Aero glass panel mixin */
+    .glass{
+      background:linear-gradient(180deg,rgba(255,255,255,0.55) 0%,rgba(200,230,255,0.3) 50%,rgba(160,210,250,0.4) 100%);
+      border:1px solid rgba(255,255,255,0.8);
+      border-bottom-color:rgba(150,200,240,0.6);
+      box-shadow:0 2px 12px rgba(80,140,200,0.18),inset 0 1px 0 rgba(255,255,255,0.9),inset 0 -1px 0 rgba(150,200,240,0.3);
+      backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+    }
+    #app{max-width:540px;margin:0 auto;padding:0 0 80px}
 
-const { Pool } = pkg;
-const app = express();
-const SECRET = process.env.JWT_SECRET || 'changeme';
-const __dirname = dirname(fileURLToPath(import.meta.url));
+    /* NAV */
+    nav{
+      position:fixed;top:0;left:0;right:0;z-index:99;height:50px;
+      background:linear-gradient(180deg,rgba(180,220,255,0.85) 0%,rgba(140,195,245,0.7) 45%,rgba(100,165,230,0.75) 50%,rgba(140,195,248,0.65) 100%);
+      border-bottom:1px solid rgba(255,255,255,0.6);
+      box-shadow:0 2px 16px rgba(50,120,200,0.3),inset 0 1px 0 rgba(255,255,255,0.95);
+      backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+      display:flex;align-items:center;justify-content:space-between;padding:0 18px;
+    }
+    .logo{
+      font-size:18px;font-weight:700;letter-spacing:.05em;
+      background:linear-gradient(180deg,#fff 0%,#b0d8f8 50%,#5a9fd4 100%);
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+      text-shadow:none;filter:drop-shadow(0 1px 2px rgba(30,80,160,0.4));
+      display:flex;align-items:center;
+    }
+    .nav-links{display:flex;gap:4px}
+    .nav-links button{
+      background:linear-gradient(180deg,rgba(255,255,255,0.7) 0%,rgba(190,225,255,0.5) 100%);
+      border:1px solid rgba(255,255,255,0.8);border-bottom-color:rgba(140,190,240,0.5);
+      border-radius:14px;cursor:pointer;color:var(--text-dark);font-family:inherit;
+      font-size:11.5px;font-weight:600;padding:4px 12px;
+      box-shadow:0 1px 4px rgba(80,140,200,0.15),inset 0 1px 0 rgba(255,255,255,0.9);
+      transition:all .15s;letter-spacing:.02em;
+    }
+    .nav-links button:hover{background:linear-gradient(180deg,rgba(255,255,255,0.9) 0%,rgba(210,235,255,0.7) 100%)}
+    .nav-links button.active{
+      background:linear-gradient(180deg,rgba(100,170,240,0.9) 0%,rgba(50,120,210,0.85) 50%,rgba(80,150,230,0.8) 100%);
+      color:#fff;border-color:rgba(30,100,200,0.5);
+      box-shadow:0 1px 6px rgba(30,100,200,0.35),inset 0 1px 0 rgba(255,255,255,0.35),inset 0 -1px 0 rgba(0,60,150,0.2);
+    }
+    .main{padding-top:66px}
 
-const connStr = (() => {
-  const internal = process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.POSTGRESQL_URL;
-  const pub = process.env.DATABASE_PUBLIC_URL || process.env.POSTGRES_PUBLIC_URL;
-  // Prefer public URL if internal hostname is a .railway.internal address,
-  // since private networking may not be available in all Railway environments.
-  if (internal && internal.includes('.railway.internal') && pub) return pub;
-  return internal || pub;
-})();
+    /* AUTH */
+    .auth{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:20px;gap:10px}
+    .auth-panel{
+      width:100%;max-width:320px;padding:28px 24px;
+      background:linear-gradient(180deg,rgba(255,255,255,0.6) 0%,rgba(210,235,255,0.45) 50%,rgba(185,220,250,0.5) 100%);
+      border:1px solid rgba(255,255,255,0.85);border-bottom-color:rgba(140,195,240,0.5);
+      border-radius:10px;
+      box-shadow:0 8px 32px rgba(60,130,210,0.2),inset 0 1px 0 rgba(255,255,255,0.95),0 1px 0 rgba(255,255,255,0.5);
+      backdrop-filter:blur(16px);
+      display:flex;flex-direction:column;gap:10px;align-items:center;
+    }
+    .auth h1{
+      font-size:26px;font-weight:700;letter-spacing:.04em;margin-bottom:8px;
+      background:linear-gradient(180deg,#fff 0%,#90c8f0 40%,#3a80c8 100%);
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+      filter:drop-shadow(0 2px 4px rgba(30,80,160,0.3));
+    }
+    .auth-sub{font-size:11px;color:var(--text-light);letter-spacing:.08em;margin-top:-8px;margin-bottom:4px}
+    input{
+      width:100%;max-width:260px;padding:8px 12px;font-family:inherit;font-size:13px;
+      background:linear-gradient(180deg,rgba(220,238,255,0.6) 0%,rgba(255,255,255,0.8) 100%);
+      border:1px solid rgba(140,195,240,0.7);border-top-color:rgba(100,160,220,0.5);
+      border-radius:5px;color:var(--text-dark);outline:none;
+      box-shadow:inset 0 2px 4px rgba(80,140,200,0.12),0 1px 0 rgba(255,255,255,0.8);
+      transition:border .15s,box-shadow .15s;
+    }
+    input:focus{border-color:rgba(50,130,220,0.8);box-shadow:inset 0 2px 4px rgba(50,120,210,0.15),0 0 0 3px rgba(80,160,240,0.18)}
+    input::placeholder{color:#9ab8d0}
 
-if (!connStr) {
-  console.error('ERROR: No database URL found. Set DATABASE_URL or DATABASE_PUBLIC_URL variable.');
-  process.exit(1);
+    /* AERO BUTTONS */
+    .btn{
+      width:100%;max-width:260px;padding:9px 18px;font-family:inherit;font-size:12px;
+      font-weight:600;letter-spacing:.06em;cursor:pointer;border-radius:20px;
+      background:linear-gradient(180deg,rgba(255,255,255,0.95) 0%,rgba(200,230,255,0.85) 49%,rgba(150,205,250,0.9) 50%,rgba(190,225,255,0.8) 100%);
+      border:1px solid rgba(120,185,240,0.7);
+      color:var(--aero-blue);
+      box-shadow:0 2px 8px rgba(60,130,210,0.25),inset 0 1px 0 rgba(255,255,255,0.95),0 1px 0 rgba(255,255,255,0.6);
+      transition:all .15s;
+    }
+    .btn:hover{
+      background:linear-gradient(180deg,rgba(255,255,255,1) 0%,rgba(220,240,255,0.95) 49%,rgba(170,215,255,0.95) 50%,rgba(210,235,255,0.9) 100%);
+      box-shadow:0 3px 12px rgba(60,130,210,0.35),inset 0 1px 0 rgba(255,255,255,1);
+    }
+    .btn:active{
+      background:linear-gradient(180deg,rgba(140,195,245,0.9) 0%,rgba(100,165,230,0.85) 49%,rgba(80,150,220,0.9) 50%,rgba(120,185,245,0.85) 100%);
+      color:#fff;box-shadow:inset 0 2px 4px rgba(30,80,160,0.2);
+    }
+    .btn-primary{
+      background:linear-gradient(180deg,rgba(100,175,245,0.95) 0%,rgba(60,140,225,0.9) 49%,rgba(40,120,210,0.95) 50%,rgba(80,160,240,0.9) 100%);
+      color:#fff;border-color:rgba(30,100,200,0.6);
+      box-shadow:0 2px 10px rgba(30,100,200,0.35),inset 0 1px 0 rgba(255,255,255,0.45),inset 0 -1px 0 rgba(0,60,160,0.2);
+    }
+    .btn-primary:hover{
+      background:linear-gradient(180deg,rgba(130,195,255,0.98) 0%,rgba(80,160,240,0.95) 49%,rgba(60,140,225,0.98) 50%,rgba(100,175,248,0.95) 100%);
+    }
+    .btn-ghost{background:linear-gradient(180deg,rgba(255,255,255,0.5) 0%,rgba(220,235,250,0.35) 100%);color:var(--text-mid);border-color:rgba(150,195,235,0.5)}
+    .err{color:#c0392b;font-size:11px;max-width:260px;text-align:center;background:rgba(255,220,220,0.5);border-radius:4px;padding:4px 8px}
+
+    /* COMPOSE */
+    .compose{
+      margin:12px 12px 0;border-radius:10px;
+      background:linear-gradient(180deg,rgba(255,255,255,0.55) 0%,rgba(210,235,255,0.4) 100%);
+      border:1px solid rgba(255,255,255,0.85);border-bottom-color:rgba(140,195,240,0.4);
+      box-shadow:0 4px 16px rgba(80,150,220,0.12),inset 0 1px 0 rgba(255,255,255,0.95);
+      padding:14px 16px;
+    }
+    textarea{
+      width:100%;resize:none;border:none;font-family:inherit;font-size:13px;
+      color:var(--text-dark);background:transparent;outline:none;min-height:52px;
+    }
+    textarea::placeholder{color:#9ab8d0}
+    .compose-footer{display:flex;justify-content:flex-end;margin-top:8px}
+    .post-btn{
+      padding:6px 20px;font-family:inherit;font-size:11.5px;font-weight:600;cursor:pointer;border-radius:14px;
+      background:linear-gradient(180deg,rgba(100,175,245,0.95) 0%,rgba(60,140,225,0.9) 49%,rgba(40,120,210,0.95) 50%,rgba(80,160,240,0.9) 100%);
+      color:#fff;border:1px solid rgba(30,100,200,0.5);letter-spacing:.04em;
+      box-shadow:0 2px 8px rgba(30,100,200,0.3),inset 0 1px 0 rgba(255,255,255,0.4);
+      transition:all .15s;
+    }
+    .post-btn:hover{box-shadow:0 3px 12px rgba(30,100,200,0.4),inset 0 1px 0 rgba(255,255,255,0.5)}
+
+    /* POST */
+    .post{
+      margin:8px 12px 0;border-radius:10px;
+      background:linear-gradient(180deg,rgba(255,255,255,0.5) 0%,rgba(210,232,255,0.35) 100%);
+      border:1px solid rgba(255,255,255,0.8);border-bottom-color:rgba(140,195,240,0.35);
+      box-shadow:0 2px 10px rgba(80,150,220,0.08),inset 0 1px 0 rgba(255,255,255,0.9);
+      padding:14px 16px;backdrop-filter:blur(8px);
+      animation:fadeUp .25s ease;
+    }
+    @keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+    .post-meta{display:flex;align-items:baseline;gap:10px;margin-bottom:7px}
+    .post-user{font-weight:700;cursor:pointer;color:var(--aero-blue);font-size:13px;transition:color .1s}
+    .post-user:hover{color:var(--aero-blue2);text-decoration:underline}
+    .post-time{font-size:10.5px;color:var(--text-light)}
+    .post-content{line-height:1.65;color:var(--text-dark);white-space:pre-wrap;word-break:break-word}
+    .post-del{float:right;background:none;border:none;cursor:pointer;color:#aac8e0;font-size:17px;line-height:1;margin-left:8px;transition:color .15s}
+    .post-del:hover{color:#c0392b}
+/* PROFILE — two-column layout */
+.profile-layout{
+  display:flex;flex-direction:row;align-items:flex-start;
+  gap:10px;margin:12px 12px 0;
+}
+/* LEFT COLUMN — userbars */
+.profile-left-col{
+  flex-shrink:0;
+  display:flex;flex-direction:column;gap:3px;
+  padding:8px 6px;
+  background:none;
+  border-radius:8px;
+  border:none;
+  box-shadow:none;
+  min-width:32px;
+}
+.profile-left-col:empty{display:none}
+/* CENTER COLUMN — holds the card centered */
+.profile-center-col{
+  flex:1;display:flex;justify-content:center;
+}
+/* PROFILE CARD */
+.profile-page{
+  width:100%;max-width:360px;
+  border-radius:14px;overflow:hidden;
+  background:linear-gradient(180deg,rgba(255,255,255,0.52) 0%,rgba(210,235,255,0.38) 100%);
+  border:1px solid rgba(255,255,255,0.85);border-bottom-color:rgba(140,195,240,0.4);
+  box-shadow:0 6px 24px rgba(80,150,220,0.16),inset 0 1px 0 rgba(255,255,255,0.95);
+}
+.profile-hero{overflow:hidden;display:flex;flex-direction:column;align-items:center}
+/* legacy userbars wrapper — hidden, replaced by left col */
+.profile-userbars{display:none}
+.profile-userbars:empty{display:none}
+.profile-userbar{
+  display:block;line-height:0;border-radius:2px;overflow:hidden;
+  box-shadow:0 1px 3px rgba(0,0,0,0.4);
+  transition:opacity .15s,transform .1s,box-shadow .15s;
+}
+.profile-userbar:hover{opacity:.82;transform:translateX(1px);box-shadow:0 2px 6px rgba(0,0,0,0.5)}
+.profile-userbar img{display:block;width:100%;height:auto;max-width:100%}
+.profile-userbars-list{
+  display:flex;flex-direction:column;gap:4px;
+  margin:8px 12px 0;
+}
+/* no-link variant */
+div.profile-userbar{cursor:default}
+.profile-body{
+  flex:1;min-width:0;
+  padding:20px 18px 18px;position:relative;
+  display:flex;flex-direction:column;align-items:center;text-align:center;
+  background:linear-gradient(180deg,rgba(255,255,255,0.15) 0%,rgba(255,255,255,0.0) 100%);
+}
+.profile-avatar{
+  width:64px;height:64px;border-radius:50%;
+  margin-bottom:10px;position:relative;z-index:1;
+  background:linear-gradient(135deg,var(--profile-accent, rgba(120,185,245,0.9)),rgba(50,130,220,0.85));
+  border:2px solid rgba(255,255,255,0.95);
+  box-shadow:0 2px 14px rgba(60,130,210,0.3),inset 0 1px 0 rgba(255,255,255,0.6);
+  display:flex;align-items:center;justify-content:center;font-size:24px;color:#fff;font-weight:700;
+}
+.profile-name{font-size:18px;font-weight:700;color:var(--text-dark);margin-bottom:2px}
+.profile-bio{color:var(--text-light);font-size:12px;font-style:italic;margin:5px 0 4px}
+.profile-stats{display:flex;gap:18px;margin-top:12px;flex-wrap:wrap;justify-content:center}
+.stat{font-size:11px;color:var(--text-light)}
+.stat strong{color:var(--text-dark);font-weight:700;display:block;font-size:15px}
+.profile-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;justify-content:center}
+.follow-btn{
+  margin-top:0;padding:6px 18px;font-size:11.5px;font-weight:600;font-family:inherit;cursor:pointer;
+  border-radius:14px;letter-spacing:.04em;transition:all .15s;
+}
+.following-btn{
+  background:linear-gradient(180deg,rgba(100,175,245,0.95) 0%,rgba(50,130,220,0.9) 50%,rgba(80,155,235,0.9) 100%);
+  color:#fff;border:1px solid rgba(30,100,200,0.5);
+  box-shadow:0 2px 8px rgba(30,100,200,0.3),inset 0 1px 0 rgba(255,255,255,0.35);
+}
+.unfollowing-btn{
+  background:linear-gradient(180deg,rgba(255,255,255,0.9) 0%,rgba(210,235,255,0.8) 100%);
+  color:var(--aero-blue);border:1px solid rgba(120,180,240,0.6);
+  box-shadow:0 2px 6px rgba(80,140,200,0.15),inset 0 1px 0 rgba(255,255,255,0.95);
+}
+.profile-custom-grid{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:10px;margin-top:14px;
+}
+.profile-widget{
+  display:block;overflow:hidden;border-radius:12px;text-decoration:none;color:inherit;
+  background:linear-gradient(180deg,rgba(255,255,255,0.7) 0%,rgba(220,238,255,0.45) 100%);
+  border:1px solid rgba(255,255,255,0.8);border-bottom-color:rgba(140,195,240,0.35);
+  box-shadow:0 2px 10px rgba(80,150,220,0.08),inset 0 1px 0 rgba(255,255,255,0.9);
+  transition:transform .15s,box-shadow .15s,background .15s;
+}
+.profile-widget:hover{
+  transform:translateY(-1px);
+  box-shadow:0 4px 14px rgba(80,150,220,0.16),inset 0 1px 0 rgba(255,255,255,0.95);
+}
+.profile-widget-image{
+  width:100%;height:84px;display:block;background-size:cover;background-position:center center;
+  background:linear-gradient(135deg,rgba(120,185,245,0.95),rgba(50,130,220,0.85));
+}
+.profile-widget-title{
+  padding:7px 8px;font-size:10.5px;font-weight:700;line-height:1.25;color:var(--text-dark);
+  word-break:break-word;
+}
+.profile-widget-link{
+  padding:0 8px 8px;font-size:10px;color:var(--text-light);word-break:break-word;
+}
+.profile-post-shell{padding-bottom:4px;margin:0 12px}
+.profile-post-shell .post{margin-top:8px;margin-left:0;margin-right:0}
+.tab-bar{
+  display:flex;margin:8px 12px 0;border-radius:8px;overflow:hidden;
+  border:1px solid rgba(255,255,255,0.7);border-bottom-color:rgba(140,195,240,0.4);
+  background:rgba(200,225,250,0.3);
+}
+.tab{
+  flex:1;padding:9px;text-align:center;background:none;border:none;cursor:pointer;
+  font-family:inherit;font-size:11px;letter-spacing:.06em;font-weight:600;color:var(--text-light);
+  transition:all .15s;
+}
+.tab.active{
+  background:linear-gradient(180deg,rgba(255,255,255,0.7) 0%,rgba(210,235,255,0.55) 100%);
+  color:var(--aero-blue);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,0.9);
 }
 
-const isInternal = connStr.includes('.railway.internal');
-const pool = new Pool({
-  connectionString: connStr,
-  ...(isInternal ? {} : { ssl: { rejectUnauthorized: false } })
-});
-
-await pool.query(`
-  CREATE TABLE IF NOT EXISTS users (
-    id SERIAL PRIMARY KEY,
-    username TEXT UNIQUE NOT NULL,
-    password TEXT NOT NULL,
-    bio TEXT DEFAULT '',
-    banner_url TEXT DEFAULT '',
-    profile_background TEXT DEFAULT '',
-    accent_color TEXT DEFAULT '#4da3ff',
-    profile_theme TEXT DEFAULT 'aero',
-    profile_widgets JSONB DEFAULT '[]'::jsonb,
-    userbars JSONB DEFAULT '[]'::jsonb,
-    avatar_url TEXT DEFAULT '',
-    created_at TIMESTAMPTZ DEFAULT NOW()
-  );
-
-  CREATE TABLE IF NOT EXISTS posts (
-    id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-    content TEXT NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT NOW()
-  );
-
-  CREATE TABLE IF NOT EXISTS follows (
-    follower INTEGER REFERENCES users(id) ON DELETE CASCADE,
-    following INTEGER REFERENCES users(id) ON DELETE CASCADE,
-    PRIMARY KEY (follower, following)
-  );
-`);
-
-const safeAlterQueries = [
-  `ALTER TABLE users ADD COLUMN IF NOT EXISTS banner_url TEXT DEFAULT ''`,
-  `ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_background TEXT DEFAULT ''`,
-  `ALTER TABLE users ADD COLUMN IF NOT EXISTS accent_color TEXT DEFAULT '#4da3ff'`,
-  `ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_theme TEXT DEFAULT 'aero'`,
-  `ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_widgets JSONB DEFAULT '[]'::jsonb`,
-  `ALTER TABLE users ADD COLUMN IF NOT EXISTS userbars JSONB DEFAULT '[]'::jsonb`,
-  `ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT DEFAULT ''`
-];
-
-for (const q of safeAlterQueries) {
-  await pool.query(q);
+/* PROFILE EDITOR */
+.profile-editor .settings-divider{margin:18px 0}
+.editor-label{
+  display:block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--text-light);margin:4px 0 6px 2px;font-weight:700;
+}
+.profile-editor-grid{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;
+  margin-bottom:10px;
+}
+.profile-editor-grid input,
+.profile-editor-grid textarea,
+.widget-slot input{
+  width:100%;max-width:100%;
+}
+.widget-editor{
+  display:grid;gap:10px;margin-top:8px;
+}
+.widget-slot{
+  border-radius:10px;padding:10px;
+  background:linear-gradient(180deg,rgba(255,255,255,0.45) 0%,rgba(210,235,255,0.28) 100%);
+  border:1px solid rgba(255,255,255,0.8);border-bottom-color:rgba(140,195,240,0.3);
+  box-shadow:0 2px 8px rgba(80,150,220,0.07),inset 0 1px 0 rgba(255,255,255,0.85);
+}
+.userbar-editor{display:grid;gap:8px;margin-top:8px}
+.userbar-slot{
+  border-radius:8px;padding:8px 10px;
+  background:linear-gradient(180deg,rgba(255,255,255,0.45) 0%,rgba(210,235,255,0.28) 100%);
+  border:1px solid rgba(255,255,255,0.8);border-bottom-color:rgba(140,195,240,0.3);
+  box-shadow:0 2px 8px rgba(80,150,220,0.07),inset 0 1px 0 rgba(255,255,255,0.85);
+}
+.userbar-slot-label{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-light);font-weight:700;margin-bottom:6px}
+.userbar-slot-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.userbar-preview{margin-top:6px;min-height:36px}
+.userbar-preview img{height:36px;display:block;border-radius:2px}
+.widget-slot-grid{
+  display:grid;grid-template-columns:1fr 1fr;gap:8px;
+}
+.widget-slot-grid .full{grid-column:1/-1}
+.save-note{
+  font-size:10.5px;color:var(--text-light);margin-top:8px;
 }
 
-app.use(express.json({ limit: '10mb' }));
-app.use(express.static('public'));
+    /* EXPLORE */
+    .search-bar{margin:12px 12px 0;border-radius:10px;
+      background:linear-gradient(180deg,rgba(255,255,255,0.5) 0%,rgba(210,232,255,0.35) 100%);
+      border:1px solid rgba(255,255,255,0.8);padding:10px 14px;
+      box-shadow:0 2px 10px rgba(80,150,220,0.08),inset 0 1px 0 rgba(255,255,255,0.9);}
+    .search-bar input{max-width:100%;margin:0;border-radius:5px}
+    .user-row{
+      display:flex;align-items:center;justify-content:space-between;
+      padding:11px 16px;margin:8px 12px 0;border-radius:10px;cursor:pointer;
+      background:linear-gradient(180deg,rgba(255,255,255,0.45) 0%,rgba(205,230,255,0.3) 100%);
+      border:1px solid rgba(255,255,255,0.75);border-bottom-color:rgba(140,195,240,0.3);
+      box-shadow:0 2px 8px rgba(80,150,220,0.07),inset 0 1px 0 rgba(255,255,255,0.85);
+      transition:all .15s;
+    }
+    .user-row:hover{background:linear-gradient(180deg,rgba(255,255,255,0.65) 0%,rgba(220,240,255,0.5) 100%);box-shadow:0 4px 14px rgba(80,150,220,0.15)}
+    .user-name{font-weight:700;color:var(--text-dark)}
+    .user-bio{font-size:11px;color:var(--text-light)}
+    .empty{padding:40px 20px;text-align:center;color:var(--text-light);font-size:12px}
 
-app.get('/', (req, res) => {
-  res.sendFile(join(__dirname, 'public', 'index.html'));
-});
+    /* SETTINGS */
+    .settings{padding:16px 12px}
+    .settings-panel{
+      border-radius:10px;padding:20px;
+      background:linear-gradient(180deg,rgba(255,255,255,0.55) 0%,rgba(210,235,255,0.4) 100%);
+      border:1px solid rgba(255,255,255,0.85);border-bottom-color:rgba(140,195,240,0.4);
+      box-shadow:0 4px 16px rgba(80,150,220,0.1),inset 0 1px 0 rgba(255,255,255,0.95);
+    }
+    .settings h2{font-size:11px;letter-spacing:.14em;color:var(--text-light);margin-bottom:14px;font-weight:600;text-transform:uppercase}
+    .settings input,.settings textarea{max-width:100%;margin-bottom:10px;width:100%;padding:9px 12px;border-radius:5px;display:block}
+    .settings textarea{min-height:64px;resize:none}
+    .settings .btn{max-width:140px}
+    .settings-divider{border:none;border-top:1px solid rgba(140,190,230,0.3);margin:18px 0}
 
-const auth = (req, res, next) => {
-  try {
-    req.user = jwt.verify((req.headers.authorization || '').split(' ')[1], SECRET);
-    next();
-  } catch {
-    res.status(401).json({ error: 'Unauthorized' });
-  }
-};
+    /* BOTTOM NAV */
+    .bottom-nav{
+      position:fixed;bottom:0;left:0;right:0;
+      background:linear-gradient(180deg,rgba(180,220,255,0.75) 0%,rgba(145,195,245,0.7) 50%,rgba(110,168,232,0.75) 100%);
+      border-top:1px solid rgba(255,255,255,0.7);
+      box-shadow:0 -2px 16px rgba(60,130,210,0.2),inset 0 1px 0 rgba(255,255,255,0.9);
+      backdrop-filter:blur(14px);
+      display:flex;justify-content:center;gap:0;
+    }
+    .bnav-btn{
+      background:none;border:none;cursor:pointer;font-family:inherit;font-size:11px;
+      letter-spacing:.06em;font-weight:600;color:rgba(30,80,140,0.6);padding:13px 30px;transition:color .15s;
+    }
+    .bnav-btn.active{color:var(--text-dark)}
 
-app.post('/api/register', async (req, res) => {
-  const { username, password } = req.body;
-
-  if (!username || !password) {
-    return res.status(400).json({ error: 'Required fields missing' });
-  }
-
-  try {
-    const hash = await bcrypt.hash(password, 10);
-
-    const { rows } = await pool.query(
-      `INSERT INTO users (username, password)
-       VALUES ($1, $2)
-       RETURNING id, username, bio, banner_url, profile_background,
-       accent_color, profile_theme, profile_widgets, userbars, avatar_url, created_at`,
-      [username, hash]
-    );
-
-    const user = rows[0];
-
-    res.json({
-      token: jwt.sign(user, SECRET, { expiresIn: '30d' }),
-      user
-    });
-  } catch (e) {
-    if (e.code === '23505') {
-      return res.status(409).json({ error: 'Username already taken' });
+    /* HEADER STRIPE */
+    .content-header{
+      margin:12px 12px 0;border-radius:10px 10px 0 0;padding:8px 16px;
+      background:linear-gradient(180deg,rgba(100,175,245,0.25) 0%,rgba(60,140,225,0.15) 100%);
+      border:1px solid rgba(255,255,255,0.6);border-bottom:none;
+      font-size:10.5px;letter-spacing:.1em;font-weight:600;color:var(--text-light);text-transform:uppercase;
     }
 
-    console.error(e);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
+    /* WATERMARK glow orbs */
+    body::before{
+      content:'';position:fixed;top:-120px;right:-80px;width:420px;height:420px;
+      background:radial-gradient(circle,rgba(140,200,255,0.35) 0%,transparent 70%);
+      pointer-events:none;z-index:0;
+    }
+    body::after{
+      content:'';position:fixed;bottom:-100px;left:-60px;width:320px;height:320px;
+      background:radial-gradient(circle,rgba(160,215,255,0.3) 0%,transparent 70%);
+      pointer-events:none;z-index:0;
+    }
+    #app{position:relative;z-index:1}
+  </style>
+</head>
+<body>
+<div id="app"></div>
 
-app.post('/api/login', async (req, res) => {
-  const { username, password } = req.body;
+<script>
+const GITHUB_USER = 'YOUR_USERNAME';
+const GITHUB_REPO = 'YOUR_REPO';
+const GITHUB_BRANCH = 'main';
+const LOGO_URL = `https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/${GITHUB_BRANCH}/logo/removebg.png`;
 
-  const { rows } = await pool.query(
-    'SELECT * FROM users WHERE username=$1',
-    [username]
-  );
+const $ = s => document.querySelector(s);
+let token = localStorage.getItem('token');
+const _rawMe = localStorage.getItem('me');
+let me = (_rawMe && _rawMe !== 'undefined') ? JSON.parse(_rawMe) : null;
+let view = 'feed', profileUser = null;
 
-  const user = rows[0];
-
-  if (!user || !(await bcrypt.compare(password, user.password))) {
-    return res.status(401).json({ error: 'Invalid credentials' });
-  }
-
-  const { password: _, ...safe } = user;
-
-  res.json({
-    token: jwt.sign(safe, SECRET, { expiresIn: '30d' }),
-    user: safe
+async function api(method, path, body) {
+  const r = await fetch(path, {
+    method,
+    headers: { 'Content-Type': 'application/json', ...(token && { Authorization: 'Bearer ' + token }) },
+    body: body ? JSON.stringify(body) : undefined
   });
-});
+  return r.json();
+}
 
-app.get('/api/feed', auth, async (req, res) => {
-  const { rows } = await pool.query(`
-    SELECT p.*, u.username,
-           u.accent_color,
-           u.banner_url
-    FROM posts p
-    JOIN users u ON u.id = p.user_id
-    WHERE p.user_id = $1
-       OR p.user_id IN (
-          SELECT following FROM follows WHERE follower = $1
-       )
-    ORDER BY p.id DESC
-    LIMIT 100
-  `, [req.user.id]);
+function timeAgo(d) {
+  const s = Math.floor((Date.now() - new Date(d)) / 1000);
+  if (s < 60) return s + 's';
+  if (s < 3600) return Math.floor(s / 60) + 'm';
+  if (s < 86400) return Math.floor(s / 3600) + 'h';
+  return Math.floor(s / 86400) + 'd';
+}
 
-  res.json(rows);
-});
+function escHtml(s) {
+  if (s === null || s === undefined) return '';
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 
-app.get('/api/explore', auth, async (req, res) => {
-  const { rows } = await pool.query(`
-    SELECT p.*, u.username,
-           u.accent_color,
-           u.banner_url
-    FROM posts p
-    JOIN users u ON u.id = p.user_id
-    ORDER BY p.id DESC
-    LIMIT 50
-  `);
-
-  res.json(rows);
-});
-
-app.post('/api/posts', auth, async (req, res) => {
-  const { content } = req.body;
-
-  if (!content?.trim()) {
-    return res.status(400).json({ error: 'Post is empty' });
+function normalizeUserbars(input) {
+  let ubs = input;
+  if (typeof ubs === 'string') {
+    try { ubs = JSON.parse(ubs); } catch { ubs = []; }
   }
+  if (!Array.isArray(ubs)) return [];
+  return ubs.map(u => ({
+    img: String(u?.img || '').trim(),
+    href: String(u?.href || '').trim(),
+  })).filter(u => u.img).slice(0, 8);
+}
 
-  const { rows } = await pool.query(
-    `INSERT INTO posts (user_id, content)
-     VALUES ($1, $2)
-     RETURNING *`,
-    [req.user.id, content.trim()]
-  );
+function previewUserbar(i) {
+  const img = document.getElementById(`ub${i}-img`)?.value.trim();
+  const preview = document.getElementById(`ub${i}-preview`);
+  if (!preview) return;
+  preview.innerHTML = img ? `<img src="${escHtml(img)}" alt="preview">` : '';
+}
 
-  res.json({
-    ...rows[0],
-    username: req.user.username
-  });
-});
-
-app.delete('/api/posts/:id', auth, async (req, res) => {
-  await pool.query(
-    'DELETE FROM posts WHERE id=$1 AND user_id=$2',
-    [req.params.id, req.user.id]
-  );
-
-  res.json({ ok: true });
-});
-
-app.get('/api/users/:username', auth, async (req, res) => {
-  const { rows } = await pool.query(
-    `SELECT id, username, bio,
-            banner_url,
-            profile_background,
-            accent_color,
-            profile_theme,
-            profile_widgets,
-            userbars,
-            avatar_url,
-            created_at
-     FROM users
-     WHERE username=$1`,
-    [req.params.username]
-  );
-
-  if (!rows[0]) {
-    return res.status(404).json({ error: 'User not found' });
+function normalizeWidgets(input) {
+  let widgets = input;
+  if (typeof widgets === 'string') {
+    try { widgets = JSON.parse(widgets); }
+    catch { widgets = []; }
   }
+  if (!Array.isArray(widgets)) return [];
+  return widgets.map((w) => ({
+    title: String(w?.title || '').trim(),
+    image: String(w?.image || '').trim(),
+    link: String(w?.link || '').trim(),
+  })).filter(w => w.title || w.image || w.link).slice(0, 6);
+}
 
-  const user = rows[0];
+function profileAccent(user) {
+  const accent = String(user?.accent_color || '').trim();
+  return accent || '#5a9fd4';
+}
 
-  const [postsR, followersR, followingR, isFollowingR] = await Promise.all([
-    pool.query('SELECT * FROM posts WHERE user_id=$1 ORDER BY id DESC', [user.id]),
-    pool.query('SELECT COUNT(*) FROM follows WHERE following=$1', [user.id]),
-    pool.query('SELECT COUNT(*) FROM follows WHERE follower=$1', [user.id]),
-    pool.query('SELECT 1 FROM follows WHERE follower=$1 AND following=$2', [req.user.id, user.id])
-  ]);
-
-  res.json({
-    ...user,
-    posts: postsR.rows,
-    followers: parseInt(followersR.rows[0].count),
-    following: parseInt(followingR.rows[0].count),
-    isFollowing: isFollowingR.rows.length > 0
+function applyProfileMedia(root) {
+  root.querySelectorAll('[data-profile-bg]').forEach((el) => {
+    const bg = String(el.dataset.profileBg || '').trim();
+    if (bg) {
+      document.body.style.backgroundImage = `url("${bg}")`;
+      document.body.style.backgroundSize = 'cover';
+      document.body.style.backgroundPosition = 'center center';
+      document.body.style.backgroundAttachment = 'fixed';
+    }
   });
-});
+}
 
-app.post('/api/follow/:id', auth, async (req, res) => {
-  const id = parseInt(req.params.id);
-
-  const { rows } = await pool.query(
-    'SELECT 1 FROM follows WHERE follower=$1 AND following=$2',
-    [req.user.id, id]
-  );
-
-  if (rows.length) {
-    await pool.query(
-      'DELETE FROM follows WHERE follower=$1 AND following=$2',
-      [req.user.id, id]
-    );
+async function verifyToken() {
+  if (!token) return;
+  const d = await api('GET', '/api/me');
+  if (d.error) {
+    token = null;
+    me = null;
+    localStorage.clear();
   } else {
-    await pool.query(
-      'INSERT INTO follows (follower, following) VALUES ($1,$2)',
-      [req.user.id, id]
-    );
+    me = d;
+    localStorage.setItem('me', JSON.stringify(me));
+  }
+}
+
+function render() {
+  document.body.style.backgroundImage = '';
+  const app = document.getElementById('app');
+  if (!token) { app.innerHTML = renderAuth(); return bindAuth(); }
+  app.innerHTML = renderShell();
+  if (view === 'feed') loadFeed();
+  else if (view === 'explore') loadExplore();
+  else if (view === 'profile' && profileUser) loadProfile(profileUser);
+  else if (view === 'settings') renderSettings();
+}
+
+function renderAuth() {
+  return `<div class="auth">
+    <div class="auth-panel">
+      <img src="${LOGO_URL}" alt="Aero World" style="width:72px;height:72px;object-fit:contain;filter:drop-shadow(0 2px 8px rgba(30,80,160,0.5));margin-bottom:4px"><h1>Aero World</h1>
+      <p class="auth-sub">connect · share · discover</p>
+      <input id="u" placeholder="username" autocomplete="off">
+      <input id="p" placeholder="password" type="password">
+      <button class="btn btn-primary" onclick="doLogin()">Sign In</button>
+      <button class="btn btn-ghost" onclick="doRegister()">Create Account</button>
+      <p class="err" id="aerr" style="display:none"></p>
+    </div>
+  </div>`;
+}
+
+function bindAuth() {
+  document.getElementById('p').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+}
+
+async function doLogin() {
+  const el = $('#aerr');
+  const d = await api('POST', '/api/login', { username: $('#u').value.trim(), password: $('#p').value });
+  if (d.error) { el.textContent = d.error; el.style.display = 'block'; return; }
+  token = d.token; me = d.user;
+  localStorage.setItem('token', token); localStorage.setItem('me', JSON.stringify(me));
+  render();
+}
+
+async function doRegister() {
+  const el = $('#aerr');
+  const d = await api('POST', '/api/register', { username: $('#u').value.trim(), password: $('#p').value });
+  if (d.error) { el.textContent = d.error; el.style.display = 'block'; return; }
+  token = d.token; me = d.user;
+  localStorage.setItem('token', token); localStorage.setItem('me', JSON.stringify(me));
+  render();
+}
+
+function getInitial(name) { return name ? name[0].toUpperCase() : '?'; }
+
+function renderShell() {
+  return `<div class="main">
+    <nav>
+      <span class="logo"><img src="${LOGO_URL}" alt="" style="height:32px;width:32px;object-fit:contain;vertical-align:middle;margin-right:6px;filter:drop-shadow(0 1px 3px rgba(30,80,160,0.5))">Aero World</span>
+      <div class="nav-links">
+        <button class="${view === 'feed' ? 'active' : ''}" onclick="goto('feed')">Feed</button>
+        <button class="${view === 'explore' ? 'active' : ''}" onclick="goto('explore')">Explore</button>
+        <button class="${view === 'profile' && profileUser === me?.username ? 'active' : ''}" onclick="goto('profile', me?.username)">@${escHtml(me?.username || '')}</button>
+        <button class="${view === 'settings' ? 'active' : ''}" onclick="goto('settings')">⚙</button>
+      </div>
+    </nav>
+    <div id="content"></div>
+  </div>`;
+}
+
+function goto(v, user) {
+  view = v;
+  if (user) profileUser = user;
+  render();
+}
+
+async function loadFeed() {
+  const content = document.getElementById('content');
+  content.innerHTML = `
+    <div class="compose">
+      <textarea id="ta" placeholder="What's on your mind?" rows="3"></textarea>
+      <div class="compose-footer"><button class="post-btn" onclick="submitPost()">Post</button></div>
+    </div>
+    <div id="posts"></div>`;
+  const posts = await api('GET', '/api/feed');
+  if (!Array.isArray(posts)) { token = null; localStorage.clear(); render(); return; }
+  document.getElementById('posts').innerHTML = posts.length
+    ? posts.map(renderPost).join('')
+    : `<div class="empty">Nothing here yet. Be the first to post!</div>`;
+}
+
+async function loadExplore() {
+  const content = document.getElementById('content');
+  content.innerHTML = `
+    <div class="search-bar"><input id="sq" placeholder="🔍  Search users..." oninput="searchUsers(this.value)"></div>
+    <div id="results"></div>`;
+  const posts = await api('GET', '/api/explore');
+  document.getElementById('results').innerHTML = posts.length
+    ? posts.map(renderPost).join('')
+    : `<div class="empty">No posts yet.</div>`;
+}
+
+async function searchUsers(q) {
+  if (!q.trim()) {
+    const posts = await api('GET', '/api/explore');
+    document.getElementById('results').innerHTML = posts.length
+      ? posts.map(renderPost).join('')
+      : `<div class="empty">No posts yet.</div>`;
+    return;
+  }
+  const users = await api('GET', '/api/search?q=' + encodeURIComponent(q));
+  document.getElementById('results').innerHTML = users.length
+    ? users.map(u => `<div class="user-row" onclick="goto('profile','${escHtml(u.username)}')">
+        <div><div class="user-name">${escHtml(u.username)}</div><div class="user-bio">${escHtml(u.bio || '')}</div></div>
+      </div>`).join('')
+    : `<div class="empty">No users found.</div>`;
+}
+
+function profileWidgetsMarkup(widgets) {
+  const arr = normalizeWidgets(widgets);
+  if (!arr.length) return '';
+  return `<div class="profile-custom-grid">
+    ${arr.map((w) => {
+      const card = `
+        <div class="profile-widget-image" ${w.image ? `data-widget-image="${escHtml(w.image)}"` : ''}></div>
+        <div class="profile-widget-title">${escHtml(w.title || 'Link')}</div>
+        ${w.link ? `<div class="profile-widget-link">${escHtml(w.link)}</div>` : ''}`;
+      return w.link
+        ? `<a class="profile-widget" href="${escHtml(w.link)}" target="_blank" rel="noopener noreferrer">${card}</a>`
+        : `<div class="profile-widget">${card}</div>`;
+    }).join('')}
+  </div>`;
+}
+
+function applyWidgetImages(root) {
+  root.querySelectorAll('[data-widget-image]').forEach((el) => {
+    const url = String(el.dataset.widgetImage || '').trim();
+    if (url) {
+      el.style.backgroundImage = `url("${url}")`;
+    }
+  });
+}
+
+async function loadProfile(username) {
+  const content = document.getElementById('content');
+  const d = await api('GET', '/api/users/' + username);
+  if (d.error) { content.innerHTML = `<div class="empty">User not found.</div>`; return; }
+  const isMe = d.id === me?.id;
+  const accent = profileAccent(d);
+  const widgets = normalizeWidgets(d.profile_widgets);
+  const userbars = normalizeUserbars(d.userbars);
+  content.innerHTML = `
+    <div class="profile-layout">
+      <div class="profile-center-col">
+        <div class="profile-page" data-profile-bg="${escHtml(d.profile_background || '')}" style="--profile-accent:${escHtml(accent)}">
+          <div class="profile-hero">
+            <div class="profile-body">
+              <div class="profile-avatar">${d.avatar_url ? `<img src="${escHtml(d.avatar_url)}" alt="avatar" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : getInitial(d.username)}</div>
+              <div class="profile-name">${escHtml(d.username)}</div>
+              ${d.bio ? `<div class="profile-bio">${escHtml(d.bio)}</div>` : ''}
+              <div class="profile-stats">
+                <div class="stat"><strong>${d.posts.length}</strong>posts</div>
+                <div class="stat"><strong>${d.followers}</strong>followers</div>
+                <div class="stat"><strong>${d.following}</strong>following</div>
+              </div>
+              <div class="profile-actions">
+                ${isMe
+                  ? `<button class="follow-btn unfollowing-btn" onclick="goto('settings')">Edit Profile</button>`
+                  : `<button class="follow-btn ${d.isFollowing ? 'following-btn' : 'unfollowing-btn'}" onclick="toggleFollow(${d.id})">${d.isFollowing ? 'Following ✓' : 'Follow'}</button>`}
+              </div>
+              ${widgets.length ? profileWidgetsMarkup(widgets) : (isMe ? `<div class="save-note">Добавь баннер, фон и карточки в Settings.</div>` : '')}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    ${userbars.length ? `<div class="profile-userbars-list">
+      ${userbars.map(ub => ub.href
+        ? `<a class="profile-userbar" href="${escHtml(ub.href)}" target="_blank" rel="noopener noreferrer"><img src="${escHtml(ub.img)}" alt="userbar" loading="lazy"></a>`
+        : `<div class="profile-userbar"><img src="${escHtml(ub.img)}" alt="userbar" loading="lazy"></div>`
+      ).join('')}
+    </div>` : ''}
+    <div class="profile-post-shell" id="profile-posts">
+      ${d.posts.length ? d.posts.map(p => renderPost({ ...p, username })).join('') : `<div class="empty">No posts yet.</div>`}
+    </div>`;
+  applyProfileMedia(content);
+  applyWidgetImages(content);
+}
+
+function renderSettings() {
+  const widgets = normalizeWidgets(me?.profile_widgets);
+  const slotCount = 4;
+  const slots = Array.from({ length: slotCount }, (_, i) => widgets[i] || { title: '', image: '', link: '' });
+  const ubSlotCount = 8;
+  const ubSlots = Array.from({ length: ubSlotCount }, (_, i) => normalizeUserbars(me?.userbars)[i] || { img: '', href: '' });
+  const content = document.getElementById('content');
+  content.innerHTML = `
+    <div class="settings">
+      <div class="settings-panel profile-editor">
+        <h2>Edit Profile</h2>
+        <label class="editor-label">Bio</label>
+        <textarea id="bio-in" placeholder="Your bio...">${escHtml(me?.bio || '')}</textarea>
+
+        <div class="profile-editor-grid">
+          <div>
+            <label class="editor-label">Avatar Image URL</label>
+            <input id="avatar-in" placeholder="https://..." value="${escHtml(me?.avatar_url || '')}">
+          </div>
+          <div>
+            <label class="editor-label">Profile Background URL</label>
+            <input id="bg-in" placeholder="https://..." value="${escHtml(me?.profile_background || '')}">
+          </div>
+          <div>
+            <label class="editor-label">Accent Color</label>
+            <input id="accent-in" placeholder="#5a9fd4" value="${escHtml(me?.accent_color || '#5a9fd4')}">
+          </div>
+        </div>
+
+        <h2>Userbars</h2>
+        <div class="userbar-editor" id="userbar-editor">
+          ${ubSlots.map((ub, i) => `
+            <div class="userbar-slot">
+              <div class="userbar-slot-label">Userbar ${i + 1}</div>
+              <div class="userbar-slot-grid">
+                <input id="ub${i}-img" placeholder="Image URL (gif/png)" value="${escHtml(ub.img || '')}" oninput="previewUserbar(${i})">
+                <input id="ub${i}-href" placeholder="Link URL (optional)" value="${escHtml(ub.href || '')}">
+              </div>
+              <div class="userbar-preview" id="ub${i}-preview">
+                ${ub.img ? `<img src="${escHtml(ub.img)}" alt="preview">` : ''}
+              </div>
+            </div>
+          `).join('')}
+        </div>
+
+        <h2>Linked Image Cards</h2>
+        <div class="widget-editor">
+          ${slots.map((w, i) => `
+            <div class="widget-slot">
+              <h3>Card ${i + 1}</h3>
+              <div class="widget-slot-grid">
+                <input id="w${i}-title" placeholder="Title" value="${escHtml(w.title || '')}">
+                <input id="w${i}-link" placeholder="Link URL" value="${escHtml(w.link || '')}">
+                <input id="w${i}-image" class="full" placeholder="Image URL" value="${escHtml(w.image || '')}">
+              </div>
+            </div>
+          `).join('')}
+        </div>
+
+        <button class="btn btn-primary" onclick="saveProfile()" style="max-width:180px">Save Changes</button>
+        <div class="save-note">Сохраняется в профиле: userbar'ы, фон, акцент и карточки с картинками.</div>
+
+        <hr class="settings-divider">
+        <h2>Account</h2>
+        <button class="btn btn-ghost" onclick="logout()" style="max-width:140px">Sign Out</button>
+      </div>
+    </div>`;
+}
+
+async function saveProfile() {
+  const widgets = [];
+  for (let i = 0; i < 4; i++) {
+    const title = document.getElementById(`w${i}-title`).value.trim();
+    const image = document.getElementById(`w${i}-image`).value.trim();
+    const link = document.getElementById(`w${i}-link`).value.trim();
+    if (title || image || link) widgets.push({ title, image, link });
   }
 
-  res.json({ ok: true });
-});
-
-app.get('/api/me', auth, async (req, res) => {
-  const { rows } = await pool.query(
-    `SELECT id, username, bio,
-            banner_url,
-            profile_background,
-            accent_color,
-            profile_theme,
-            profile_widgets,
-            userbars,
-            avatar_url,
-            created_at
-     FROM users
-     WHERE id=$1`,
-    [req.user.id]
-  );
-
-  if (!rows[0]) {
-    return res.status(404).json({ error: 'User not found' });
+  const userbars = [];
+  for (let i = 0; i < 8; i++) {
+    const img = document.getElementById(`ub${i}-img`).value.trim();
+    const href = document.getElementById(`ub${i}-href`).value.trim();
+    if (img) userbars.push({ img, href });
   }
 
-  res.json(rows[0]);
-});
+  const payload = {
+    bio: document.getElementById('bio-in').value,
+    avatar_url: document.getElementById('avatar-in').value.trim(),
+    profile_background: document.getElementById('bg-in').value.trim(),
+    accent_color: document.getElementById('accent-in').value.trim(),
+    profile_widgets: widgets,
+    userbars,
+  };
 
-app.patch('/api/me', auth, async (req, res) => {
-  try {
-    const {
-      bio,
-      banner_url,
-      profile_background,
-      accent_color,
-      profile_theme,
-      profile_widgets,
-      userbars,
-      avatar_url
-    } = req.body || {};
+  const d = await api('PATCH', '/api/me', payload);
+  if (d.error) return;
+  me = d.user;
+  localStorage.setItem('me', JSON.stringify(me));
+  if (view === 'profile') loadProfile(me.username);
+}
 
-    const safeWidgets = Array.isArray(profile_widgets)
-      ? profile_widgets.slice(0, 12)
-      : [];
+async function toggleFollow(id) {
+  await api('POST', '/api/follow/' + id);
+  loadProfile(profileUser);
+}
 
-    const safeUserbars = Array.isArray(userbars)
-      ? userbars.slice(0, 12)
-      : [];
+function renderPost(p) {
+  const del = p.user_id === me?.id
+    ? `<button class="post-del" onclick="delPost(${p.id},this)" title="Delete">×</button>`
+    : '';
+  return `<div class="post" id="post-${p.id}">
+    ${del}
+    <div class="post-meta">
+      <span class="post-user" onclick="goto('profile','${escHtml(p.username)}')">${escHtml(p.username)}</span>
+      <span class="post-time">${timeAgo(p.created_at)}</span>
+    </div>
+    <div class="post-content">${escHtml(p.content)}</div>
+  </div>`;
+}
 
-    await pool.query(
-      `UPDATE users
-       SET bio = $1,
-           banner_url = $2,
-           profile_background = $3,
-           accent_color = $4,
-           profile_theme = $5,
-           profile_widgets = $6::jsonb,
-           userbars = $7::jsonb,
-           avatar_url = $8
-       WHERE id = $9`,
-      [
-        typeof bio === 'string' ? bio.slice(0, 300) : '',
-        typeof banner_url === 'string' ? banner_url.slice(0, 2000) : '',
-        typeof profile_background === 'string' ? profile_background.slice(0, 2000) : '',
-        typeof accent_color === 'string' ? accent_color : '#4da3ff',
-        typeof profile_theme === 'string' ? profile_theme : 'aero',
-        JSON.stringify(safeWidgets),
-        JSON.stringify(safeUserbars),
-        typeof avatar_url === 'string' ? avatar_url.slice(0, 2000) : '',
-        req.user.id
-      ]
-    );
+async function submitPost() {
+  const ta = document.getElementById('ta');
+  if (!ta.value.trim()) return;
+  const post = await api('POST', '/api/posts', { content: ta.value });
+  if (post.error) return;
+  ta.value = '';
+  document.getElementById('posts').insertAdjacentHTML('afterbegin', renderPost(post));
+}
 
-    const { rows } = await pool.query(
-      `SELECT id, username, bio,
-              banner_url,
-              profile_background,
-              accent_color,
-              profile_theme,
-              profile_widgets,
-              userbars,
-              avatar_url,
-              created_at
-       FROM users
-       WHERE id=$1`,
-      [req.user.id]
-    );
+async function delPost(id) {
+  await api('DELETE', '/api/posts/' + id);
+  document.getElementById('post-' + id)?.remove();
+}
 
-    res.json({ ok: true, user: rows[0] });
-  } catch (e) {
-    console.error('PROFILE_UPDATE_ERROR', e);
-    res.status(500).json({ error: 'Failed to update profile' });
-  }
-});
+function logout() {
+  token = null; me = null;
+  localStorage.removeItem('token'); localStorage.removeItem('me');
+  render();
+}
 
-app.get('/api/search', auth, async (req, res) => {
-  const q = `%${(req.query.q || '').toLowerCase()}%`;
+verifyToken().then(render);
+</script>
 
-  const { rows } = await pool.query(
-    `SELECT id,
-            username,
-            bio,
-            banner_url,
-            accent_color,
-            created_at
-     FROM users
-     WHERE LOWER(username) LIKE $1
-     LIMIT 20`,
-    [q]
-  );
-
-  res.json(rows);
-});
-
-app.listen(process.env.PORT || 8080, () => {
-  console.log('Listening on', process.env.PORT || 8080);
-  console.log('DB host:', connStr.replace(/\/\/.*@/, '//***@'));
-});
+</body>
+</html>
