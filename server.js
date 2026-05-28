@@ -377,7 +377,7 @@ app.get('/api/search', auth, async (req, res) => {
   res.json(rows);
 });
 
-app.listen(process.env.PORT || 3000, () => {
-  console.log('Listening on', process.env.PORT || 3000);
+app.listen(process.env.PORT || 8080, () => {
+  console.log('Listening on', process.env.PORT || 8080);
   console.log('DB host:', connStr.replace(/\/\/.*@/, '//***@'));
 });
