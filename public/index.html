@@ -136,7 +136,21 @@
       color:var(--text-dark);background:transparent;outline:none;min-height:52px;
     }
     textarea::placeholder{color:#9ab8d0}
-    .compose-footer{display:flex;justify-content:flex-end;margin-top:8px}
+    .compose-footer{display:flex;justify-content:space-between;align-items:center;margin-top:8px;gap:8px}
+    .media-btn{
+      display:flex;align-items:center;gap:5px;padding:5px 12px;font-family:inherit;font-size:11.5px;
+      font-weight:600;cursor:pointer;border-radius:14px;color:#5a9fd4;
+      background:rgba(100,175,245,0.12);border:1px solid rgba(100,175,245,0.35);
+      transition:all .15s;white-space:nowrap;
+    }
+    .media-btn:hover{background:rgba(100,175,245,0.22)}
+    #media-preview-wrap{margin-top:10px;position:relative;display:inline-block;max-width:100%}
+    #media-preview-wrap img,#media-preview-wrap video{max-width:100%;max-height:280px;border-radius:8px;display:block;border:1px solid rgba(100,175,245,0.3)}
+    #media-clear{position:absolute;top:4px;right:4px;background:rgba(0,0,0,0.55);color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:13px;cursor:pointer;line-height:22px;text-align:center}
+    .post-media{margin-top:8px}
+    .post-media img{max-width:100%;border-radius:8px;display:block;border:1px solid rgba(100,175,245,0.2)}
+    .post-media video{max-width:100%;border-radius:8px;display:block;border:1px solid rgba(100,175,245,0.2)}
+    #media-err{font-size:11px;color:#d94f4f;margin-top:4px}
     .post-btn{
       padding:6px 20px;font-family:inherit;font-size:11.5px;font-weight:600;cursor:pointer;border-radius:14px;
       background:linear-gradient(180deg,rgba(100,175,245,0.95) 0%,rgba(60,140,225,0.9) 49%,rgba(40,120,210,0.95) 50%,rgba(80,160,240,0.9) 100%);
@@ -579,7 +593,18 @@ async function loadFeed() {
   content.innerHTML = `
     <div class="compose">
       <textarea id="ta" placeholder="What's on your mind?" rows="3"></textarea>
-      <div class="compose-footer"><button class="post-btn" onclick="submitPost()">Post</button></div>
+      <div id="media-preview-wrap" style="display:none">
+        <div id="media-preview"></div>
+        <button id="media-clear" onclick="clearMedia()" title="Remove">×</button>
+      </div>
+      <div id="media-err"></div>
+      <div class="compose-footer">
+        <label class="media-btn" title="Attach image or video">
+          📎 Photo / Video
+          <input type="file" id="media-file" accept="image/png,image/jpeg,image/gif,video/mp4" style="display:none" onchange="handleMediaFile(this)">
+        </label>
+        <button class="post-btn" onclick="submitPost()">Post</button>
+      </div>
     </div>
     <div id="posts"></div>`;
   const posts = await api('GET', '/api/feed');
@@ -797,22 +822,95 @@ function renderPost(p) {
   const del = p.user_id === me?.id
     ? `<button class="post-del" onclick="delPost(${p.id},this)" title="Delete">×</button>`
     : '';
+  let media = '';
+  if (p.media_url) {
+    if (p.media_type === 'video/mp4') {
+      media = `<div class="post-media"><video src="${p.media_url}" controls preload="metadata" style="max-height:360px"></video></div>`;
+    } else {
+      media = `<div class="post-media"><img src="${p.media_url}" alt="media" loading="lazy"></div>`;
+    }
+  }
   return `<div class="post" id="post-${p.id}">
     ${del}
     <div class="post-meta">
       <span class="post-user" onclick="goto('profile','${escHtml(p.username)}')">${escHtml(p.username)}</span>
       <span class="post-time">${timeAgo(p.created_at)}</span>
     </div>
-    <div class="post-content">${escHtml(p.content)}</div>
+    ${p.content ? `<div class="post-content">${escHtml(p.content)}</div>` : ''}
+    ${media}
   </div>`;
+}
+
+let _pendingMedia = null; // { dataUrl, type }
+
+function handleMediaFile(input) {
+  const file = input.files[0];
+  const err = document.getElementById('media-err');
+  err.textContent = '';
+  if (!file) return;
+
+  const MAX = 25 * 1024 * 1024;
+  if (file.size > MAX) { err.textContent = 'File too large (max 25 MB)'; input.value=''; return; }
+
+  const ALLOWED = ['image/png','image/jpeg','image/gif','video/mp4'];
+  if (!ALLOWED.includes(file.type)) { err.textContent = 'Only PNG, JPG, GIF, MP4 allowed'; input.value=''; return; }
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    if (file.type === 'video/mp4') {
+      // Check duration via a temp video element
+      const vid = document.createElement('video');
+      vid.preload = 'metadata';
+      vid.onloadedmetadata = () => {
+        URL.revokeObjectURL(vid.src);
+        if (vid.duration > 180) {
+          err.textContent = 'Video too long (max 3 minutes)';
+          input.value = '';
+          return;
+        }
+        _pendingMedia = { dataUrl: e.target.result, type: file.type };
+        showMediaPreview(file.type, e.target.result);
+      };
+      vid.src = URL.createObjectURL(file);
+    } else {
+      _pendingMedia = { dataUrl: e.target.result, type: file.type };
+      showMediaPreview(file.type, e.target.result);
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+function showMediaPreview(type, src) {
+  const wrap = document.getElementById('media-preview-wrap');
+  const preview = document.getElementById('media-preview');
+  if (type === 'video/mp4') {
+    preview.innerHTML = `<video src="${src}" controls style="max-height:200px;border-radius:8px;max-width:100%"></video>`;
+  } else {
+    preview.innerHTML = `<img src="${src}" style="max-height:200px;border-radius:8px;max-width:100%">`;
+  }
+  wrap.style.display = 'inline-block';
+}
+
+function clearMedia() {
+  _pendingMedia = null;
+  document.getElementById('media-preview-wrap').style.display = 'none';
+  document.getElementById('media-preview').innerHTML = '';
+  document.getElementById('media-file').value = '';
+  document.getElementById('media-err').textContent = '';
 }
 
 async function submitPost() {
   const ta = document.getElementById('ta');
-  if (!ta.value.trim()) return;
-  const post = await api('POST', '/api/posts', { content: ta.value });
+  if (!ta.value.trim() && !_pendingMedia) return;
+  const btn = document.querySelector('.post-btn');
+  btn.disabled = true; btn.textContent = 'Posting…';
+  const body = { content: ta.value };
+  if (_pendingMedia) { body.media_url = _pendingMedia.dataUrl; body.media_type = _pendingMedia.type; }
+  const post = await api('POST', '/api/posts', body);
+  btn.disabled = false; btn.textContent = 'Post';
   if (post.error) return;
   ta.value = '';
+  clearMedia();
   document.getElementById('posts').insertAdjacentHTML('afterbegin', renderPost(post));
 }
 
