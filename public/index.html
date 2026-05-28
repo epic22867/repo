@@ -46,6 +46,7 @@
       background:linear-gradient(180deg,#fff 0%,#b0d8f8 50%,#5a9fd4 100%);
       -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
       text-shadow:none;filter:drop-shadow(0 1px 2px rgba(30,80,160,0.4));
+      display:flex;align-items:center;
     }
     .nav-links{display:flex;gap:4px}
     .nav-links button{
@@ -402,6 +403,11 @@ div.profile-userbar{cursor:default}
 <div id="app"></div>
 
 <script>
+const GITHUB_USER = 'YOUR_USERNAME';
+const GITHUB_REPO = 'YOUR_REPO';
+const GITHUB_BRANCH = 'main';
+const LOGO_URL = `https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/${GITHUB_BRANCH}/logo/removebg.png`;
+
 const $ = s => document.querySelector(s);
 let token = localStorage.getItem('token'), me = JSON.parse(localStorage.getItem('me') || 'null');
 let view = 'feed', profileUser = null;
@@ -510,7 +516,7 @@ function render() {
 function renderAuth() {
   return `<div class="auth">
     <div class="auth-panel">
-      <h1>Aero World</h1>
+      <img src="${LOGO_URL}" alt="Aero World" style="width:72px;height:72px;object-fit:contain;filter:drop-shadow(0 2px 8px rgba(30,80,160,0.5));margin-bottom:4px"><h1>Aero World</h1>
       <p class="auth-sub">connect · share · discover</p>
       <input id="u" placeholder="username" autocomplete="off">
       <input id="p" placeholder="password" type="password">
@@ -548,7 +554,7 @@ function getInitial(name) { return name ? name[0].toUpperCase() : '?'; }
 function renderShell() {
   return `<div class="main">
     <nav>
-      <span class="logo">✦ Aero World</span>
+      <span class="logo"><img src="${LOGO_URL}" alt="" style="height:32px;width:32px;object-fit:contain;vertical-align:middle;margin-right:6px;filter:drop-shadow(0 1px 3px rgba(30,80,160,0.5))">Aero World</span>
       <div class="nav-links">
         <button class="${view === 'feed' ? 'active' : ''}" onclick="goto('feed')">Feed</button>
         <button class="${view === 'explore' ? 'active' : ''}" onclick="goto('explore')">Explore</button>
