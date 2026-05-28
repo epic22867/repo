@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>grey</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet">
+  <style>
+    *{margin:0;box-sizing:border-box}
+    :root{--bg:#f0efed;--card:#fff;--b:#e2e0dc;--t:#1c1c1c;--m:#909090;--a:#3d3d3d}
+    body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--t);min-height:100vh;font-size:13px}
+    #app{max-width:520px;margin:0 auto;padding:0 0 80px}
+    nav{position:fixed;top:0;left:0;right:0;background:var(--bg);border-bottom:1px solid var(--b);z-index:9;display:flex;align-items:center;justify-content:space-between;padding:0 20px;height:44px}
+    .logo{font-weight:400;letter-spacing:.15em;font-size:12px;color:var(--t)}
+    .nav-links{display:flex;gap:20px}
+    .nav-links button{background:none;border:none;cursor:pointer;color:var(--m);font-family:inherit;font-size:11px;letter-spacing:.08em;padding:4px 0}
+    .nav-links button.active{color:var(--t);border-bottom:1px solid var(--t)}
+    .main{padding-top:60px}
+    /* Auth */
+    .auth{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:20px;gap:8px}
+    .auth h1{font-size:11px;letter-spacing:.2em;color:var(--m);font-weight:300;margin-bottom:16px}
+    input{width:100%;max-width:280px;padding:10px 12px;background:var(--card);border:1px solid var(--b);color:var(--t);font-family:inherit;font-size:13px;outline:none}
+    input:focus{border-color:var(--a)}
+    input::placeholder{color:#bbb}
+    .btn{width:100%;max-width:280px;padding:10px;background:var(--t);color:var(--bg);border:none;cursor:pointer;font-family:inherit;font-size:11px;letter-spacing:.1em}
+    .btn:hover{background:var(--a)}
+    .btn-ghost{background:none;color:var(--m);border:1px solid var(--b)}
+    .btn-ghost:hover{background:var(--card);color:var(--t)}
+    .err{color:#c0392b;font-size:11px;max-width:280px;text-align:center}
+    /* Feed */
+    .compose{padding:16px 20px;border-bottom:1px solid var(--b);background:var(--card)}
+    textarea{width:100%;resize:none;border:none;font-family:inherit;font-size:13px;color:var(--t);background:transparent;outline:none;min-height:56px}
+    textarea::placeholder{color:#bbb}
+    .compose-footer{display:flex;justify-content:flex-end;margin-top:8px}
+    .post-btn{padding:6px 14px;background:var(--t);color:var(--bg);border:none;cursor:pointer;font-family:inherit;font-size:11px;letter-spacing:.06em}
+    .post-btn:hover{background:var(--a)}
+    .post{padding:16px 20px;border-bottom:1px solid var(--b);background:var(--card)}
+    .post-meta{display:flex;align-items:baseline;gap:10px;margin-bottom:8px}
+    .post-user{font-weight:400;cursor:pointer;color:var(--t)}
+    .post-user:hover{text-decoration:underline}
+    .post-time{font-size:11px;color:var(--m);font-weight:300}
+    .post-content{line-height:1.6;font-weight:300;white-space:pre-wrap;word-break:break-word}
+    .post-del{float:right;background:none;border:none;cursor:pointer;color:#ccc;font-size:15px;line-height:1;margin-left:8px}
+    .post-del:hover{color:#c0392b}
+    /* Profile */
+    .profile-header{padding:24px 20px 16px;border-bottom:1px solid var(--b);background:var(--card)}
+    .profile-name{font-size:15px;font-weight:400;margin-bottom:4px}
+    .profile-bio{color:var(--m);font-weight:300;margin:6px 0;font-size:12px;font-style:italic}
+    .profile-stats{display:flex;gap:20px;margin-top:12px}
+    .stat{font-size:11px;color:var(--m)}
+    .stat strong{color:var(--t);font-weight:400;display:block;font-size:14px}
+    .follow-btn{margin-top:12px;padding:6px 16px;font-size:11px;letter-spacing:.08em;font-family:inherit;cursor:pointer;border:1px solid var(--t)}
+    .following-btn{background:var(--t);color:var(--bg)}
+    .unfollowing-btn{background:none;color:var(--t)}
+    .tab-bar{display:flex;border-bottom:1px solid var(--b);background:var(--card)}
+    .tab{flex:1;padding:10px;text-align:center;background:none;border:none;cursor:pointer;font-family:inherit;font-size:11px;letter-spacing:.08em;color:var(--m)}
+    .tab.active{color:var(--t);border-bottom:2px solid var(--t)}
+    /* Explore / search */
+    .search-bar{padding:12px 20px;background:var(--card);border-bottom:1px solid var(--b)}
+    .search-bar input{max-width:100%;border-radius:0}
+    .user-row{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-bottom:1px solid var(--b);background:var(--card);cursor:pointer}
+    .user-row:hover{background:var(--bg)}
+    .user-name{font-weight:400}
+    .user-bio{font-size:11px;color:var(--m);font-weight:300}
+    .empty{padding:40px 20px;text-align:center;color:var(--m);font-size:12px;font-weight:300}
+    /* Settings */
+    .settings{padding:24px 20px}
+    .settings h2{font-size:11px;letter-spacing:.15em;color:var(--m);margin-bottom:16px;font-weight:300}
+    .settings input,.settings textarea{max-width:100%;margin-bottom:8px;width:100%;padding:10px 12px;background:var(--card);border:1px solid var(--b);color:var(--t);font-family:inherit;font-size:13px;outline:none;display:block}
+    .settings textarea{min-height:64px;resize:none}
+    .settings .btn{max-width:160px}
+    .bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--bg);border-top:1px solid var(--b);display:flex;justify-content:center;gap:0}
+    .bnav-btn{background:none;border:none;cursor:pointer;font-family:inherit;font-size:11px;letter-spacing:.08em;color:var(--m);padding:12px 28px}
+    .bnav-btn.active{color:var(--t)}
+  </style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const $ = s => document.querySelector(s);
+let token = localStorage.getItem('token'), me = JSON.parse(localStorage.getItem('me') || 'null');
+let view = 'feed', profileUser = null;
+
+async function api(method, path, body) {
+  const r = await fetch(path, {
+    method, headers: { 'Content-Type': 'application/json', ...(token && { Authorization: 'Bearer ' + token }) },
+    body: body ? JSON.stringify(body) : undefined
+  });
+  return r.json();
+}
+
+function timeAgo(d) {
+  const s = Math.floor((Date.now() - new Date(d)) / 1000);
+  if (s < 60) return s + 's';
+  if (s < 3600) return Math.floor(s/60) + 'm';
+  if (s < 86400) return Math.floor(s/3600) + 'h';
+  return Math.floor(s/86400) + 'd';
+}
+
+function render() {
+  const app = document.getElementById('app');
+  if (!token) { app.innerHTML = renderAuth(); return bindAuth(); }
+  app.innerHTML = renderShell();
+  bindNav();
+  if (view === 'feed') loadFeed();
+  else if (view === 'explore') loadExplore();
+  else if (view === 'profile' && profileUser) loadProfile(profileUser);
+  else if (view === 'settings') renderSettings();
+}
+
+function renderAuth() {
+  return `<div class="auth">
+    <h1>grey</h1>
+    <input id="u" placeholder="username" autocomplete="off">
+    <input id="p" placeholder="password" type="password">
+    <button class="btn" onclick="doLogin()">sign in</button>
+    <button class="btn btn-ghost" onclick="doRegister()">create account</button>
+    <p class="err" id="aerr"></p>
+  </div>`;
+}
+
+function bindAuth() {
+  document.getElementById('p').addEventListener('keydown', e => { if (e.key==='Enter') doLogin(); });
+}
+
+async function doLogin() {
+  const d = await api('POST','/api/login',{username:$('#u').value.trim(),password:$('#p').value});
+  if (d.error) { $('#aerr').textContent = d.error; return; }
+  token = d.token; me = d.user;
+  localStorage.setItem('token', token); localStorage.setItem('me', JSON.stringify(me));
+  render();
+}
+
+async function doRegister() {
+  const d = await api('POST','/api/register',{username:$('#u').value.trim(),password:$('#p').value});
+  if (d.error) { $('#aerr').textContent = d.error; return; }
+  token = d.token; me = d.user;
+  localStorage.setItem('token', token); localStorage.setItem('me', JSON.stringify(me));
+  render();
+}
+
+function renderShell() {
+  return `<div class="main">
+    <nav>
+      <span class="logo">grey</span>
+      <div class="nav-links">
+        <button class="${view==='feed'?'active':''}" onclick="goto('feed')">feed</button>
+        <button class="${view==='explore'?'active':''}" onclick="goto('explore')">explore</button>
+        <button class="${view==='profile'&&profileUser===me?.username?'active':''}" onclick="goto('profile',me?.username)">@${me?.username}</button>
+      </div>
+    </nav>
+    <div id="content"></div>
+  </div>`;
+}
+
+function bindNav() {}
+
+function goto(v, user) {
+  view = v; if (user) profileUser = user; render();
+}
+
+async function loadFeed() {
+  const content = document.getElementById('content');
+  content.innerHTML = `<div class="compose"><textarea id="ta" placeholder="what's on your mind?" rows="3"></textarea><div class="compose-footer"><button class="post-btn" onclick="submitPost()">post</button></div></div><div id="posts"></div>`;
+  const posts = await api('GET','/api/feed');
+  document.getElementById('posts').innerHTML = posts.length ? posts.map(renderPost).join('') : `<div class="empty">nothing here yet.</div>`;
+}
+
+async function loadExplore() {
+  const content = document.getElementById('content');
+  content.innerHTML = `<div class="search-bar"><input id="sq" placeholder="search users..." oninput="searchUsers(this.value)"></div><div id="results"></div>`;
+  const posts = await api('GET','/api/explore');
+  document.getElementById('results').innerHTML = posts.length ? posts.map(renderPost).join('') : `<div class="empty">no posts yet.</div>`;
+}
+
+async function searchUsers(q) {
+  if (!q.trim()) { const posts = await api('GET','/api/explore'); document.getElementById('results').innerHTML = posts.map(renderPost).join('') || `<div class="empty">no posts yet.</div>`; return; }
+  const users = await api('GET','/api/search?q='+encodeURIComponent(q));
+  document.getElementById('results').innerHTML = users.length ? users.map(u=>`<div class="user-row" onclick="goto('profile','${u.username}')"><div><div class="user-name">${u.username}</div><div class="user-bio">${u.bio||''}</div></div></div>`).join('') : `<div class="empty">no users found.</div>`;
+}
+
+async function loadProfile(username) {
+  const content = document.getElementById('content');
+  const d = await api('GET','/api/users/'+username);
+  if (d.error) { content.innerHTML = `<div class="empty">user not found.</div>`; return; }
+  const isMe = d.id === me?.id;
+  content.innerHTML = `<div class="profile-header">
+    <div class="profile-name">${d.username}</div>
+    ${d.bio ? `<div class="profile-bio">${d.bio}</div>` : ''}
+    <div class="profile-stats">
+      <div class="stat"><strong>${d.posts.length}</strong>posts</div>
+      <div class="stat"><strong>${d.followers}</strong>followers</div>
+      <div class="stat"><strong>${d.following}</strong>following</div>
+    </div>
+    ${isMe ? `<button class="follow-btn unfollowing-btn" onclick="goto('settings')">edit profile</button>` : `<button class="follow-btn ${d.isFollowing?'following-btn':'unfollowing-btn'}" onclick="toggleFollow(${d.id})">${d.isFollowing?'following':'follow'}</button>`}
+  </div>
+  <div id="profile-posts">${d.posts.length ? d.posts.map(p=>renderPost({...p,username})).join('') : `<div class="empty">no posts yet.</div>`}</div>`;
+}
+
+function renderSettings() {
+  const content = document.getElementById('content');
+  content.innerHTML = `<div class="settings">
+    <h2>settings</h2>
+    <input id="bio-in" placeholder="bio" value="${me?.bio||''}">
+    <button class="btn" onclick="saveBio()">save</button>
+    <br><br>
+    <button class="btn btn-ghost" onclick="logout()">sign out</button>
+  </div>`;
+}
+
+async function saveBio() {
+  await api('PATCH','/api/me',{bio:document.getElementById('bio-in').value});
+  me.bio = document.getElementById('bio-in').value;
+  localStorage.setItem('me', JSON.stringify(me));
+}
+
+async function toggleFollow(id) {
+  await api('POST','/api/follow/'+id);
+  loadProfile(profileUser);
+}
+
+function renderPost(p) {
+  const del = p.user_id === me?.id ? `<button class="post-del" onclick="delPost(${p.id},this)" title="delete">×</button>` : '';
+  return `<div class="post" id="post-${p.id}">${del}<div class="post-meta"><span class="post-user" onclick="goto('profile','${p.username}')">${p.username}</span><span class="post-time">${timeAgo(p.created_at)}</span></div><div class="post-content">${escHtml(p.content)}</div></div>`;
+}
+
+async function submitPost() {
+  const ta = document.getElementById('ta');
+  if (!ta.value.trim()) return;
+  const post = await api('POST','/api/posts',{content:ta.value});
+  if (post.error) return;
+  ta.value = '';
+  const posts = document.getElementById('posts');
+  posts.insertAdjacentHTML('afterbegin', renderPost(post));
+}
+
+async function delPost(id, btn) {
+  await api('DELETE','/api/posts/'+id);
+  document.getElementById('post-'+id)?.remove();
+}
+
+function logout() {
+  token = null; me = null;
+  localStorage.removeItem('token'); localStorage.removeItem('me');
+  render();
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+render();
+</script>
+</body>
+</html>
