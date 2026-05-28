@@ -1,93 +1,152 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { JSONFilePreset } from 'lowdb/node';
+import pkg from 'pg';
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 
+const { Pool } = pkg;
 const app = express();
 const SECRET = process.env.JWT_SECRET || 'changeme';
-const db = await JSONFilePreset('db.json', { users: [], posts: [], follows: [] });
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
-app.use(express.json()).use(express.static('public'));
+const pool = new Pool({ connectionString: process.env.POSTGRES_URL, ssl: { rejectUnauthorized: false } });
+
+// Init tables
+await pool.query(`
+  CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    username TEXT UNIQUE NOT NULL,
+    password TEXT NOT NULL,
+    bio TEXT DEFAULT '',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  );
+  CREATE TABLE IF NOT EXISTS posts (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    content TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  );
+  CREATE TABLE IF NOT EXISTS follows (
+    follower INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    following INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    PRIMARY KEY (follower, following)
+  );
+`);
+
+app.use(express.json());
+
+// Serve index.html at root
+app.get('/', (req, res) => {
+  res.sendFile(join(__dirname, 'public', 'index.html'));
+});
+app.use(express.static('public'));
 
 const auth = (req, res, next) => {
-  try { req.user = jwt.verify((req.headers.authorization||'').split(' ')[1], SECRET); next(); }
+  try { req.user = jwt.verify((req.headers.authorization || '').split(' ')[1], SECRET); next(); }
   catch { res.status(401).json({ error: 'Unauthorized' }); }
 };
-
-const nextId = arr => arr.length ? Math.max(...arr.map(x=>x.id)) + 1 : 1;
-const now = () => new Date().toISOString();
 
 app.post('/api/register', async (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) return res.status(400).json({ error: 'Required' });
-  if (db.data.users.find(u=>u.username===username)) return res.status(409).json({ error: 'Username taken' });
-  const user = { id: nextId(db.data.users), username, password: await bcrypt.hash(password, 10), bio: '', created_at: now() };
-  db.data.users.push(user); await db.write();
-  const { password: _, ...safe } = user;
-  res.json({ token: jwt.sign(safe, SECRET, { expiresIn: '30d' }), user: safe });
+  try {
+    const hash = await bcrypt.hash(password, 10);
+    const { rows } = await pool.query(
+      'INSERT INTO users (username, password) VALUES ($1, $2) RETURNING id, username, bio, created_at',
+      [username, hash]
+    );
+    const user = rows[0];
+    res.json({ token: jwt.sign(user, SECRET, { expiresIn: '30d' }), user });
+  } catch (e) {
+    if (e.code === '23505') return res.status(409).json({ error: 'Username taken' });
+    throw e;
+  }
 });
 
 app.post('/api/login', async (req, res) => {
   const { username, password } = req.body;
-  const user = db.data.users.find(u=>u.username===username);
+  const { rows } = await pool.query('SELECT * FROM users WHERE username=$1', [username]);
+  const user = rows[0];
   if (!user || !await bcrypt.compare(password, user.password)) return res.status(401).json({ error: 'Invalid credentials' });
   const { password: _, ...safe } = user;
   res.json({ token: jwt.sign(safe, SECRET, { expiresIn: '30d' }), user: safe });
 });
 
-app.get('/api/feed', auth, (req, res) => {
-  const following = db.data.follows.filter(f=>f.follower===req.user.id).map(f=>f.following);
-  const ids = [req.user.id, ...following];
-  const posts = db.data.posts.filter(p=>ids.includes(p.user_id)).sort((a,b)=>b.id-a.id).slice(0,100);
-  res.json(posts.map(p=>({...p, username: db.data.users.find(u=>u.id===p.user_id)?.username})));
+app.get('/api/feed', auth, async (req, res) => {
+  const { rows } = await pool.query(`
+    SELECT p.*, u.username FROM posts p
+    JOIN users u ON u.id = p.user_id
+    WHERE p.user_id = $1 OR p.user_id IN (SELECT following FROM follows WHERE follower=$1)
+    ORDER BY p.id DESC LIMIT 100
+  `, [req.user.id]);
+  res.json(rows);
 });
 
-app.get('/api/explore', auth, (req, res) => {
-  const posts = [...db.data.posts].sort((a,b)=>b.id-a.id).slice(0,50);
-  res.json(posts.map(p=>({...p, username: db.data.users.find(u=>u.id===p.user_id)?.username})));
+app.get('/api/explore', auth, async (req, res) => {
+  const { rows } = await pool.query(`
+    SELECT p.*, u.username FROM posts p
+    JOIN users u ON u.id = p.user_id
+    ORDER BY p.id DESC LIMIT 50
+  `);
+  res.json(rows);
 });
 
 app.post('/api/posts', auth, async (req, res) => {
   const { content } = req.body;
   if (!content?.trim()) return res.status(400).json({ error: 'Empty' });
-  const post = { id: nextId(db.data.posts), user_id: req.user.id, content: content.trim(), created_at: now() };
-  db.data.posts.push(post); await db.write();
-  res.json({ ...post, username: req.user.username });
+  const { rows } = await pool.query(
+    'INSERT INTO posts (user_id, content) VALUES ($1, $2) RETURNING *',
+    [req.user.id, content.trim()]
+  );
+  res.json({ ...rows[0], username: req.user.username });
 });
 
 app.delete('/api/posts/:id', auth, async (req, res) => {
-  db.data.posts = db.data.posts.filter(p=>!(p.id==req.params.id && p.user_id===req.user.id));
-  await db.write(); res.json({ ok: true });
+  await pool.query('DELETE FROM posts WHERE id=$1 AND user_id=$2', [req.params.id, req.user.id]);
+  res.json({ ok: true });
 });
 
-app.get('/api/users/:username', auth, (req, res) => {
-  const user = db.data.users.find(u=>u.username===req.params.username);
-  if (!user) return res.status(404).json({ error: 'Not found' });
-  const { password: _, ...safe } = user;
-  const posts = db.data.posts.filter(p=>p.user_id===user.id).sort((a,b)=>b.id-a.id);
-  const followers = db.data.follows.filter(f=>f.following===user.id).length;
-  const following = db.data.follows.filter(f=>f.follower===user.id).length;
-  const isFollowing = !!db.data.follows.find(f=>f.follower===req.user.id && f.following===user.id);
-  res.json({ ...safe, posts, followers, following, isFollowing });
+app.get('/api/users/:username', auth, async (req, res) => {
+  const { rows } = await pool.query('SELECT * FROM users WHERE username=$1', [req.params.username]);
+  if (!rows[0]) return res.status(404).json({ error: 'Not found' });
+  const { password: _, ...user } = rows[0];
+  const [postsR, followersR, followingR, isFollowingR] = await Promise.all([
+    pool.query('SELECT * FROM posts WHERE user_id=$1 ORDER BY id DESC', [user.id]),
+    pool.query('SELECT COUNT(*) FROM follows WHERE following=$1', [user.id]),
+    pool.query('SELECT COUNT(*) FROM follows WHERE follower=$1', [user.id]),
+    pool.query('SELECT 1 FROM follows WHERE follower=$1 AND following=$2', [req.user.id, user.id]),
+  ]);
+  res.json({
+    ...user,
+    posts: postsR.rows,
+    followers: parseInt(followersR.rows[0].count),
+    following: parseInt(followingR.rows[0].count),
+    isFollowing: isFollowingR.rows.length > 0,
+  });
 });
 
 app.post('/api/follow/:id', auth, async (req, res) => {
   const id = parseInt(req.params.id);
-  const existing = db.data.follows.findIndex(f=>f.follower===req.user.id && f.following===id);
-  if (existing>=0) db.data.follows.splice(existing,1);
-  else db.data.follows.push({ follower: req.user.id, following: id });
-  await db.write(); res.json({ ok: true });
-});
-
-app.patch('/api/me', auth, async (req, res) => {
-  const user = db.data.users.find(u=>u.id===req.user.id);
-  if (user) { user.bio = req.body.bio||''; await db.write(); }
+  const { rows } = await pool.query('SELECT 1 FROM follows WHERE follower=$1 AND following=$2', [req.user.id, id]);
+  if (rows.length) await pool.query('DELETE FROM follows WHERE follower=$1 AND following=$2', [req.user.id, id]);
+  else await pool.query('INSERT INTO follows (follower, following) VALUES ($1,$2)', [req.user.id, id]);
   res.json({ ok: true });
 });
 
-app.get('/api/search', auth, (req, res) => {
-  const q = (req.query.q||'').toLowerCase();
-  res.json(db.data.users.filter(u=>u.username.toLowerCase().includes(q)).slice(0,20).map(({password:_,...u})=>u));
+app.patch('/api/me', auth, async (req, res) => {
+  await pool.query('UPDATE users SET bio=$1 WHERE id=$2', [req.body.bio || '', req.user.id]);
+  res.json({ ok: true });
 });
 
-app.listen(process.env.PORT||3000, ()=>console.log('Listening on', process.env.PORT||3000));
+app.get('/api/search', auth, async (req, res) => {
+  const q = `%${(req.query.q || '').toLowerCase()}%`;
+  const { rows } = await pool.query(
+    'SELECT id, username, bio, created_at FROM users WHERE LOWER(username) LIKE $1 LIMIT 20',
+    [q]
+  );
+  res.json(rows);
+});
+
+app.listen(process.env.PORT || 3000, () => console.log('Listening on', process.env.PORT || 3000));
