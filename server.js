@@ -83,7 +83,8 @@ const safeAlterQueries = [
   `ALTER TABLE users ADD COLUMN IF NOT EXISTS userbars JSONB DEFAULT '[]'::jsonb`,
   `ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT DEFAULT ''`,
   `ALTER TABLE posts ADD COLUMN IF NOT EXISTS media_url TEXT DEFAULT ''`,
-  `ALTER TABLE posts ADD COLUMN IF NOT EXISTS media_type TEXT DEFAULT ''`
+  `ALTER TABLE posts ADD COLUMN IF NOT EXISTS media_type TEXT DEFAULT ''`,
+  `ALTER TABLE posts ADD COLUMN IF NOT EXISTS is_sticker BOOLEAN DEFAULT FALSE`
 ];
 
 for (const q of safeAlterQueries) {
@@ -279,14 +280,14 @@ app.post('/api/posts', auth, async (req, res) => {
   stamps.push(now);
   postTimestamps.set(uid, stamps);
 
-  const { content, media_url, media_type } = req.body;
+  const { content, media_url, media_type, is_sticker } = req.body;
 
   if (!content?.trim() && !media_url) {
     return res.status(400).json({ error: 'Post is empty' });
   }
 
-  // Validate media size (base64 ~33% overhead; 25MB raw → ~34MB base64)
-  if (media_url && media_url.length > 34 * 1024 * 1024) {
+  // Stickers are remote URLs from GitHub — skip base64 size check
+  if (media_url && !is_sticker && media_url.length > 34 * 1024 * 1024) {
     return res.status(400).json({ error: 'Media too large (max 25 MB)' });
   }
 
@@ -296,10 +297,10 @@ app.post('/api/posts', auth, async (req, res) => {
   }
 
   const { rows } = await pool.query(
-    `INSERT INTO posts (user_id, content, media_url, media_type)
-     VALUES ($1, $2, $3, $4)
+    `INSERT INTO posts (user_id, content, media_url, media_type, is_sticker)
+     VALUES ($1, $2, $3, $4, $5)
      RETURNING *`,
-    [req.user.id, (content || '').trim(), media_url || '', media_type || '']
+    [req.user.id, (content || '').trim(), media_url || '', media_type || '', !!is_sticker]
   );
 
   res.json({ ...rows[0], username: req.user.username });
