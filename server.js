@@ -60,7 +60,19 @@ await pool.query(`
     following INTEGER REFERENCES users(id) ON DELETE CASCADE,
     PRIMARY KEY (follower, following)
   );
+
+  CREATE TABLE IF NOT EXISTS timeouts (
+    user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    expires_at TIMESTAMPTZ NOT NULL,
+    reason TEXT DEFAULT ''
+  );
 `);
+
+// In-memory rate limit tracker: userId -> array of post timestamps (ms)
+const postTimestamps = new Map();
+const RATE_WINDOW_MS = 20 * 1000;   // 20 seconds
+const RATE_MAX_POSTS = 4;            // max posts per window
+const AUTO_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 
 const safeAlterQueries = [
   `ALTER TABLE users ADD COLUMN IF NOT EXISTS banner_url TEXT DEFAULT ''`,
@@ -182,7 +194,91 @@ app.get('/api/explore', auth, async (req, res) => {
   res.json(rows);
 });
 
+// Helper: check if user is currently timed out. Returns { timedOut, expiresAt, reason } or null.
+async function getUserTimeout(userId) {
+  const { rows } = await pool.query(
+    'SELECT expires_at, reason FROM timeouts WHERE user_id=$1 AND expires_at > NOW()',
+    [userId]
+  );
+  if (!rows[0]) return null;
+  return { expiresAt: rows[0].expires_at, reason: rows[0].reason };
+}
+
+// Helper: apply a timeout to a user
+async function applyTimeout(userId, durationMs, reason = '') {
+  const expiresAt = new Date(Date.now() + durationMs);
+  await pool.query(
+    `INSERT INTO timeouts (user_id, expires_at, reason)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (user_id) DO UPDATE SET expires_at=$2, reason=$3`,
+    [userId, expiresAt, reason]
+  );
+}
+
+// GET /api/me/timeout — frontend polls this to know if user is timed out
+app.get('/api/me/timeout', auth, async (req, res) => {
+  const t = await getUserTimeout(req.user.id);
+  res.json(t ? { timedOut: true, expiresAt: t.expiresAt, reason: t.reason } : { timedOut: false });
+});
+
+// POST /api/admin/timeout — manually time out a user (requires admin secret header)
+app.post('/api/admin/timeout', async (req, res) => {
+  const adminSecret = process.env.ADMIN_SECRET || 'admin-secret-changeme';
+  if (req.headers['x-admin-secret'] !== adminSecret) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+  const { username, duration_minutes, reason } = req.body;
+  if (!username || !duration_minutes) {
+    return res.status(400).json({ error: 'username and duration_minutes required' });
+  }
+  const { rows } = await pool.query('SELECT id FROM users WHERE username=$1', [username]);
+  if (!rows[0]) return res.status(404).json({ error: 'User not found' });
+  const ms = parseInt(duration_minutes) * 60 * 1000;
+  await applyTimeout(rows[0].id, ms, reason || '');
+  res.json({ ok: true, username, expires_at: new Date(Date.now() + ms) });
+});
+
+// DELETE /api/admin/timeout — remove a timeout early
+app.delete('/api/admin/timeout', async (req, res) => {
+  const adminSecret = process.env.ADMIN_SECRET || 'admin-secret-changeme';
+  if (req.headers['x-admin-secret'] !== adminSecret) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+  const { username } = req.body;
+  if (!username) return res.status(400).json({ error: 'username required' });
+  const { rows } = await pool.query('SELECT id FROM users WHERE username=$1', [username]);
+  if (!rows[0]) return res.status(404).json({ error: 'User not found' });
+  await pool.query('DELETE FROM timeouts WHERE user_id=$1', [rows[0].id]);
+  res.json({ ok: true });
+});
+
 app.post('/api/posts', auth, async (req, res) => {
+  // 1. Check for active manual/auto timeout in DB
+  const activeTimeout = await getUserTimeout(req.user.id);
+  if (activeTimeout) {
+    return res.status(429).json({
+      error: 'timeout',
+      expiresAt: activeTimeout.expiresAt,
+      reason: activeTimeout.reason || ''
+    });
+  }
+
+  // 2. Rate-limit: max 4 posts per 20 seconds → auto 5-min timeout
+  const now = Date.now();
+  const uid = req.user.id;
+  const stamps = (postTimestamps.get(uid) || []).filter(t => now - t < RATE_WINDOW_MS);
+  if (stamps.length >= RATE_MAX_POSTS) {
+    await applyTimeout(uid, AUTO_TIMEOUT_MS, 'Posting too fast');
+    postTimestamps.delete(uid);
+    return res.status(429).json({
+      error: 'timeout',
+      expiresAt: new Date(now + AUTO_TIMEOUT_MS),
+      reason: 'Posting too fast'
+    });
+  }
+  stamps.push(now);
+  postTimestamps.set(uid, stamps);
+
   const { content, media_url, media_type } = req.body;
 
   if (!content?.trim() && !media_url) {
