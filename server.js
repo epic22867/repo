@@ -138,6 +138,12 @@ app.post('/api/follow/:id', auth, async (req, res) => {
   res.json({ ok: true });
 });
 
+app.get('/api/me', auth, async (req, res) => {
+  const { rows } = await pool.query('SELECT id, username, bio, created_at FROM users WHERE id=$1', [req.user.id]);
+  if (!rows[0]) return res.status(404).json({ error: 'Not found' });
+  res.json(rows[0]);
+});
+
 app.patch('/api/me', auth, async (req, res) => {
   await pool.query('UPDATE users SET bio=$1 WHERE id=$2', [req.body.bio || '', req.user.id]);
   res.json({ ok: true });
