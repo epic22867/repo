@@ -96,6 +96,13 @@ function timeAgo(d) {
   return Math.floor(s/86400) + 'd';
 }
 
+async function verifyToken() {
+  if (!token) return;
+  const d = await api('GET', '/api/me');
+  if (d.error) { token = null; me = null; localStorage.clear(); }
+  else { me = d; localStorage.setItem('me', JSON.stringify(me)); }
+}
+
 function render() {
   const app = document.getElementById('app');
   if (!token) { app.innerHTML = renderAuth(); return bindAuth(); }
@@ -162,7 +169,9 @@ async function loadFeed() {
   const content = document.getElementById('content');
   content.innerHTML = `<div class="compose"><textarea id="ta" placeholder="what's on your mind?" rows="3"></textarea><div class="compose-footer"><button class="post-btn" onclick="submitPost()">post</button></div></div><div id="posts"></div>`;
   const posts = await api('GET','/api/feed');
-  document.getElementById('posts').innerHTML = posts.length ? posts.map(renderPost).join('') : `<div class="empty">nothing here yet.</div>`;
+  const arr = Array.isArray(posts) ? posts : [];
+  if (!Array.isArray(posts)) { token=null; localStorage.clear(); render(); return; }
+  document.getElementById('posts').innerHTML = arr.length ? arr.map(renderPost).join('') : `<div class="empty">nothing here yet.</div>`;
 }
 
 async function loadExplore() {
@@ -248,7 +257,7 @@ function escHtml(s) {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-render();
+verifyToken().then(render);
 </script>
 </body>
 </html>
