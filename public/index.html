@@ -410,7 +410,7 @@ function normalizeWidgets(input) {
 }
 
 function profileAccent(user) {
-  const accent = String(user?.profile_accent || '').trim();
+  const accent = String(user?.accent_color || '').trim();
   return accent || '#5a9fd4';
 }
 
@@ -590,9 +590,9 @@ async function loadProfile(username) {
   const accent = profileAccent(d);
   const widgets = normalizeWidgets(d.profile_widgets);
   content.innerHTML = `
-    <div class="profile-page" data-profile-bg="${escHtml(d.profile_background_url || '')}" style="--profile-accent:${escHtml(accent)}">
+    <div class="profile-page" data-profile-bg="${escHtml(d.profile_background || '')}" style="--profile-accent:${escHtml(accent)}">
       <div class="profile-hero">
-        <div class="profile-banner" data-banner="${escHtml(d.profile_banner_url || '')}"></div>
+        <div class="profile-banner" data-banner="${escHtml(d.banner_url || '')}"></div>
         <div class="profile-body">
           <div class="profile-avatar">${getInitial(d.username)}</div>
           <div class="profile-name">${escHtml(d.username)}</div>
@@ -633,15 +633,15 @@ function renderSettings() {
         <div class="profile-editor-grid">
           <div>
             <label class="editor-label">Banner Image URL</label>
-            <input id="banner-in" placeholder="https://..." value="${escHtml(me?.profile_banner_url || '')}">
+            <input id="banner-in" placeholder="https://..." value="${escHtml(me?.banner_url || '')}">
           </div>
           <div>
             <label class="editor-label">Profile Background URL</label>
-            <input id="bg-in" placeholder="https://..." value="${escHtml(me?.profile_background_url || '')}">
+            <input id="bg-in" placeholder="https://..." value="${escHtml(me?.profile_background || '')}">
           </div>
           <div>
             <label class="editor-label">Accent Color</label>
-            <input id="accent-in" placeholder="#5a9fd4" value="${escHtml(me?.profile_accent || '#5a9fd4')}">
+            <input id="accent-in" placeholder="#5a9fd4" value="${escHtml(me?.accent_color || '#5a9fd4')}">
           </div>
         </div>
 
@@ -680,9 +680,9 @@ async function saveProfile() {
 
   const payload = {
     bio: document.getElementById('bio-in').value,
-    profile_banner_url: document.getElementById('banner-in').value.trim(),
-    profile_background_url: document.getElementById('bg-in').value.trim(),
-    profile_accent: document.getElementById('accent-in').value.trim(),
+    banner_url: document.getElementById('banner-in').value.trim(),
+    profile_background: document.getElementById('bg-in').value.trim(),
+    accent_color: document.getElementById('accent-in').value.trim(),
     profile_widgets: widgets,
   };
 
