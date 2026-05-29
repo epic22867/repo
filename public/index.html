@@ -1051,7 +1051,8 @@ async function toggleLike(postId) {
 }
 
 // ── COMMENTS ──────────────────────────────────────────────────
-const _commentsOpen = new Set(); // postIds with comments visible
+const _commentsOpen = new Set();
+const COMMENTS_PAGE = 3; // how many to show initially
 
 async function toggleComments(postId) {
   const section = document.getElementById(`comments-${postId}`);
@@ -1071,6 +1072,8 @@ async function loadComments(postId) {
   const section = document.getElementById(`comments-${postId}`);
   if (!section) return;
   section.innerHTML = `<div style="font-size:11px;color:var(--text-light);padding:4px 0">Loading…</div>`;
+  // Refresh me to get latest avatar
+  try { const fresh = await api('GET', '/api/me'); if (fresh && !fresh.error) me = fresh; } catch {}
   const comments = await api('GET', `/api/posts/${postId}/comments`);
   if (!Array.isArray(comments)) { section.innerHTML = ''; return; }
   renderComments(postId, comments);
@@ -1079,19 +1082,49 @@ async function loadComments(postId) {
 function renderComments(postId, comments) {
   const section = document.getElementById(`comments-${postId}`);
   if (!section) return;
-  // Update comment count badge
   const countEl = document.getElementById(`comment-count-${postId}`);
   if (countEl) countEl.textContent = comments.length > 0 ? comments.length : '';
 
-  const list = comments.map(c => renderComment(postId, c)).join('');
+  const visible = comments.slice(0, COMMENTS_PAGE);
+  const hidden  = comments.slice(COMMENTS_PAGE);
+
+  // Current user avatar — always fresh from me object
+  const myAvatar = me?.avatar_url
+    ? `<img src="${escHtml(me.avatar_url)}" alt="">`
+    : getInitial(me?.username);
+
+  const showMoreBtn = hidden.length > 0
+    ? `<button class="comments-load-more" id="show-more-${postId}" onclick="showMoreComments(${postId})">
+        ↓ Show ${hidden.length} more comment${hidden.length > 1 ? 's' : ''}
+       </button>`
+    : '';
+
   section.innerHTML = `
-    <div id="comment-list-${postId}">${list || `<div style="font-size:11px;color:var(--text-light);padding:2px 0 6px">No comments yet</div>`}</div>
+    <div id="comment-list-${postId}">
+      ${visible.length ? visible.map(c => renderComment(postId, c)).join('') : `<div style="font-size:11px;color:var(--text-light);padding:2px 0 6px">No comments yet</div>`}
+    </div>
+    ${showMoreBtn}
     <div class="comment-input-row">
-      <div class="comment-avatar">${me?.avatar_url ? `<img src="${escHtml(me.avatar_url)}" alt="">` : getInitial(me?.username)}</div>
+      <div class="comment-avatar" id="my-avatar-${postId}">${myAvatar}</div>
       <input class="comment-input" id="comment-input-${postId}" placeholder="Add a comment…" maxlength="500"
         onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();submitComment(${postId})}">
       <button class="comment-submit" onclick="submitComment(${postId})">Send</button>
     </div>`;
+
+  // Store hidden comments on the section element for show more
+  section._hiddenComments = hidden;
+  section._postId = postId;
+}
+
+function showMoreComments(postId) {
+  const section = document.getElementById(`comments-${postId}`);
+  if (!section || !section._hiddenComments) return;
+  const list = document.getElementById(`comment-list-${postId}`);
+  section._hiddenComments.forEach(c => {
+    list.insertAdjacentHTML('beforeend', renderComment(postId, c));
+  });
+  section._hiddenComments = [];
+  document.getElementById(`show-more-${postId}`)?.remove();
 }
 
 function renderComment(postId, c) {
@@ -1122,7 +1155,8 @@ async function submitComment(postId) {
   const list = document.getElementById(`comment-list-${postId}`);
   if (list) {
     // Remove "no comments" placeholder if present
-    if (list.querySelector('div')) list.innerHTML = '';
+    const placeholder = list.querySelector('div');
+    if (placeholder && !placeholder.id) placeholder.remove();
     list.insertAdjacentHTML('beforeend', renderComment(postId, c));
   }
   // Update counter
@@ -1130,6 +1164,11 @@ async function submitComment(postId) {
   if (countEl) {
     const cur = parseInt(countEl.textContent) || 0;
     countEl.textContent = cur + 1;
+  }
+  // Also update my avatar in input row in case it just loaded
+  const myAvatarEl = document.getElementById(`my-avatar-${postId}`);
+  if (myAvatarEl && me?.avatar_url) {
+    myAvatarEl.innerHTML = `<img src="${escHtml(me.avatar_url)}" alt="">`;
   }
 }
 
