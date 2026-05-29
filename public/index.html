@@ -673,6 +673,42 @@ div.profile-userbar{cursor:default}
     .snews-send-btn:disabled{opacity:.55;cursor:default}
     .snews-err{font-size:10px;color:#c0392b;margin-top:4px}
 
+    /* ONLINE PANEL */
+    .online-panel{
+      border-radius:10px;
+      background:linear-gradient(180deg,rgba(255,255,255,0.55) 0%,rgba(210,235,255,0.4) 100%);
+      border:1px solid rgba(255,255,255,0.85);border-bottom-color:rgba(140,195,240,0.4);
+      box-shadow:0 4px 16px rgba(80,150,220,0.12),inset 0 1px 0 rgba(255,255,255,0.95);
+      margin-bottom:8px;overflow:hidden;
+    }
+    .online-header{
+      display:flex;align-items:center;gap:5px;padding:7px 10px;
+      background:linear-gradient(180deg,rgba(100,175,245,0.2) 0%,rgba(60,140,225,0.1) 100%);
+      border-bottom:1px solid rgba(140,195,240,0.25);
+    }
+    .online-title{font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;font-weight:700;color:var(--text-light)}
+    .online-count{
+      font-size:9px;font-weight:700;margin-left:auto;
+      background:rgba(60,200,100,0.18);border:1px solid rgba(60,200,100,0.4);
+      color:#1a8a40;border-radius:8px;padding:1px 5px;
+    }
+    .online-body{padding:8px 10px;min-height:36px}
+    .online-user{
+      display:flex;align-items:center;gap:6px;
+      padding:3px 0;cursor:pointer;border-radius:6px;
+      transition:background .12s;
+    }
+    .online-user:hover{background:rgba(100,175,245,0.12);padding-left:4px;margin-left:-4px}
+    .online-dot{
+      width:7px;height:7px;border-radius:50%;flex-shrink:0;
+      background:radial-gradient(circle at 35% 35%,#6ef0a0,#22c55e);
+      box-shadow:0 0 4px rgba(34,197,94,0.6);
+    }
+    .online-dot.me{background:radial-gradient(circle at 35% 35%,#80d0ff,#3a8ee6);box-shadow:0 0 4px rgba(58,142,230,0.6)}
+    .online-name{font-size:11px;color:var(--text-dark);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .online-name.me{color:var(--aero-blue)}
+    .online-empty{font-size:11px;color:var(--text-light);text-align:center;padding:8px 0}
+
     @media(max-width:620px){
       #app:has(.two-col-layout){max-width:540px}
       .two-col-layout{flex-direction:column}
@@ -806,7 +842,21 @@ function render() {
   else if (view === 'settings') renderSettings();
 }
 
-function renderAuth() {
+function renderAuth(mode) {
+  if (mode === 'register') {
+    return `<div class="auth">
+      <div class="auth-panel">
+        <img src="${LOGO_URL}" alt="Aero World" style="width:72px;height:72px;object-fit:contain;filter:drop-shadow(0 2px 8px rgba(30,80,160,0.5));margin-bottom:4px"><h1>Aero World</h1>
+        <p class="auth-sub">create your account</p>
+        <input id="ru" placeholder="choose a username" autocomplete="off">
+        <input id="rp" placeholder="choose a password" type="password">
+        <input id="rp2" placeholder="confirm password" type="password">
+        <button class="btn btn-primary" onclick="doRegister()">Create Account</button>
+        <button class="btn btn-ghost" onclick="showLogin()">← Back to Sign In</button>
+        <p class="err" id="aerr" style="display:none"></p>
+      </div>
+    </div>`;
+  }
   return `<div class="auth">
     <div class="auth-panel">
       <img src="${LOGO_URL}" alt="Aero World" style="width:72px;height:72px;object-fit:contain;filter:drop-shadow(0 2px 8px rgba(30,80,160,0.5));margin-bottom:4px"><h1>Aero World</h1>
@@ -814,10 +864,20 @@ function renderAuth() {
       <input id="u" placeholder="username" autocomplete="off">
       <input id="p" placeholder="password" type="password">
       <button class="btn btn-primary" onclick="doLogin()">Sign In</button>
-      <button class="btn btn-ghost" onclick="doRegister()">Create Account</button>
+      <button class="btn btn-ghost" onclick="showRegister()">Create Account</button>
       <p class="err" id="aerr" style="display:none"></p>
     </div>
   </div>`;
+}
+
+function showRegister() {
+  document.getElementById('app').innerHTML = renderAuth('register');
+  document.getElementById('rp2').addEventListener('keydown', e => { if (e.key === 'Enter') doRegister(); });
+}
+
+function showLogin() {
+  document.getElementById('app').innerHTML = renderAuth('login');
+  bindAuth();
 }
 
 function bindAuth() {
@@ -835,7 +895,13 @@ async function doLogin() {
 
 async function doRegister() {
   const el = $('#aerr');
-  const d = await api('POST', '/api/register', { username: $('#u').value.trim(), password: $('#p').value });
+  const username = ($('#ru') || $('#u'))?.value.trim();
+  const password = ($('#rp') || $('#p'))?.value;
+  const confirm = $('#rp2')?.value;
+  if (confirm !== undefined && password !== confirm) { el.textContent = 'Passwords do not match.'; el.style.display = 'block'; return; }
+  if (!username) { el.textContent = 'Please enter a username.'; el.style.display = 'block'; return; }
+  if (!password) { el.textContent = 'Please enter a password.'; el.style.display = 'block'; return; }
+  const d = await api('POST', '/api/register', { username, password });
   if (d.error) { el.textContent = d.error; el.style.display = 'block'; return; }
   token = d.token; me = d.user;
   localStorage.setItem('token', token); localStorage.setItem('me', JSON.stringify(me));
@@ -850,8 +916,8 @@ function renderShell() {
     <nav>
       <span class="logo"><img src="${LOGO_URL}" alt="" style="height:32px;width:32px;object-fit:contain;vertical-align:middle;margin-right:6px;filter:drop-shadow(0 1px 3px rgba(30,80,160,0.5))">Aero World</span>
       <div class="nav-links">
-        <button class="${view === 'feed' ? 'active' : ''}" onclick="goto('feed')">Feed</button>
-        <button class="${view === 'explore' ? 'active' : ''}" onclick="goto('explore')">Explore</button>
+        <button class="${view === 'feed' ? 'active' : ''}" onclick="goto('feed')">Explore</button>
+        <button class="${view === 'explore' ? 'active' : ''}" onclick="goto('explore')">Notifications</button>
         <button class="${view === 'profile' && profileUser === me?.username ? 'active' : ''}" onclick="goto('profile', me?.username)">@${escHtml(me?.username || '')}</button>
         <button class="${view === 'settings' ? 'active' : ''}" onclick="goto('settings')">⚙</button>
       </div>
@@ -876,6 +942,7 @@ function goto(v, user) {
 
 async function loadFeed() {
   await fetchPoints();
+  startOnlinePresence();
   loadNewsSidebar();
   const content = document.getElementById('content');
   content.innerHTML = `
@@ -914,6 +981,7 @@ async function loadFeed() {
 }
 
 async function loadExplore() {
+  startOnlinePresence();
   loadNewsSidebar();
   const content = document.getElementById('content');
   content.innerHTML = `
@@ -1022,7 +1090,10 @@ function renderSettings() {
   content.innerHTML = `
     <div class="settings">
       <div class="settings-panel profile-editor">
-        <h2>Edit Profile</h2>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:2px">
+          <h2 style="margin:0">Edit Profile</h2>
+          <button class="btn btn-primary" onclick="saveProfile()" style="max-width:140px;padding:7px 16px;font-size:11.5px">Save Changes</button>
+        </div>
         <label class="editor-label">Bio</label>
         <textarea id="bio-in" placeholder="Your bio...">${escHtml(me?.bio || '')}</textarea>
 
@@ -1071,11 +1142,6 @@ function renderSettings() {
           `).join('')}
         </div>
 
-        <button class="btn btn-primary" onclick="saveProfile()" style="max-width:180px">Save Changes</button>
-        <div class="save-note">Сохраняется в профиле: userbar'ы, фон, акцент и карточки с картинками.</div>
-
-        <hr class="settings-divider">
-        <h2>Account</h2>
         <button class="btn btn-ghost" onclick="logout()" style="max-width:140px">Sign Out</button>
       </div>
     </div>`;
@@ -1645,6 +1711,7 @@ async function delPost(id) {
 }
 
 function logout() {
+  stopOnlinePresence();
   token = null; me = null;
   localStorage.removeItem('token'); localStorage.removeItem('me');
   render();
@@ -1742,6 +1809,15 @@ async function loadNewsSidebar() {
   const hint = _aeroPoints >= 10 ? '✨ Ready to send News!' : `${10 - _aeroPoints} more to send News`;
 
   sidebar.innerHTML = `
+    <div class="online-panel" id="online-panel">
+      <div class="online-header">
+        <span style="font-size:11px">🟢</span>
+        <span class="online-title">Online</span>
+        <span class="online-count" id="online-count">…</span>
+      </div>
+      <div class="online-body" id="online-body"><div class="online-empty">Loading…</div></div>
+    </div>
+
     <div class="snews-points">
       <div class="snews-points-label">⭐ Aero-Points</div>
       <div class="snews-points-val" id="snews-pts-val">${_aeroPoints}</div>
@@ -1803,6 +1879,60 @@ async function submitSidebarNews() {
   updateSnewsChar();
   _aeroPoints -= 10;
   loadNewsSidebar();
+}
+
+// ── ONLINE PRESENCE ──────────────────────────────────────────
+let _onlinePingInterval = null;
+let _onlinePollInterval = null;
+
+function startOnlinePresence() {
+  // Ping immediately, then every 30s
+  api('POST', '/api/online/ping').catch(() => {});
+  if (_onlinePingInterval) clearInterval(_onlinePingInterval);
+  _onlinePingInterval = setInterval(() => {
+    api('POST', '/api/online/ping').catch(() => {});
+  }, 30000);
+
+  // Poll online users every 15s
+  fetchOnlineUsers();
+  if (_onlinePollInterval) clearInterval(_onlinePollInterval);
+  _onlinePollInterval = setInterval(fetchOnlineUsers, 15000);
+
+  // Remove from online on page close
+  window.addEventListener('beforeunload', () => {
+    navigator.sendBeacon && navigator.sendBeacon('/api/online/ping', null);
+    api('DELETE', '/api/online/ping').catch(() => {});
+  });
+}
+
+function stopOnlinePresence() {
+  if (_onlinePingInterval) { clearInterval(_onlinePingInterval); _onlinePingInterval = null; }
+  if (_onlinePollInterval) { clearInterval(_onlinePollInterval); _onlinePollInterval = null; }
+  if (token) api('DELETE', '/api/online/ping').catch(() => {});
+}
+
+async function fetchOnlineUsers() {
+  try {
+    const users = await api('GET', '/api/online/users');
+    renderOnlinePanel(Array.isArray(users) ? users : []);
+  } catch {}
+}
+
+function renderOnlinePanel(users) {
+  const body = document.getElementById('online-body');
+  const countEl = document.getElementById('online-count');
+  if (!body) return;
+  if (countEl) countEl.textContent = users.length;
+  if (!users.length) {
+    body.innerHTML = `<div class="online-empty">No one online</div>`;
+    return;
+  }
+  body.innerHTML = users.map(u =>
+    `<div class="online-user" onclick="goto('profile','${escHtml(u.username)}')">
+      <div class="online-dot${u.isMe ? ' me' : ''}"></div>
+      <span class="online-name${u.isMe ? ' me' : ''}">${escHtml(u.username)}${u.isMe ? ' (you)' : ''}</span>
+    </div>`
+  ).join('');
 }
 
 verifyToken().then(render);
