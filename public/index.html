@@ -1,1942 +1,749 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Aero World</title>
-  <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@300;400;600;700&family=Trebuchet+MS&display=swap" rel="stylesheet">
-  <style>
-    *{margin:0;box-sizing:border-box}
-    :root{
-      --sky1:#c8dff5;--sky2:#a0c4e8;--sky3:#6aaad4;
-      --glass-bg:rgba(255,255,255,0.35);
-      --glass-border:rgba(255,255,255,0.75);
-      --glass-shadow:rgba(100,160,220,0.25);
-      --aero-blue:#1e6bbf;--aero-blue2:#3a8ee6;
-      --text-dark:#1a2a3a;--text-mid:#3a5070;--text-light:#5a7090;
-      --btn-top:rgba(255,255,255,0.95);--btn-bot:rgba(180,215,250,0.8);
-      --active-top:rgba(120,185,245,0.95);--active-bot:rgba(50,130,210,0.9);
-    }
-    body{
-      font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;
-      background:linear-gradient(160deg,#b8d8f5 0%,#d0e8f8 30%,#e8f3fc 55%,#cce0f5 80%,#a8cce8 100%);
-      min-height:100vh;color:var(--text-dark);font-size:13px;
-      background-attachment:fixed;
-    }
-    /* Aero glass panel mixin */
-    .glass{
-      background:linear-gradient(180deg,rgba(255,255,255,0.55) 0%,rgba(200,230,255,0.3) 50%,rgba(160,210,250,0.4) 100%);
-      border:1px solid rgba(255,255,255,0.8);
-      border-bottom-color:rgba(150,200,240,0.6);
-      box-shadow:0 2px 12px rgba(80,140,200,0.18),inset 0 1px 0 rgba(255,255,255,0.9),inset 0 -1px 0 rgba(150,200,240,0.3);
-      backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
-    }
-    #app{max-width:540px;margin:0 auto;padding:0 0 80px}
-    /* Wider container when sidebar is shown */
-    #app:has(.two-col-layout){max-width:760px}
-
-    /* NAV */
-    nav{
-      position:fixed;top:0;left:0;right:0;z-index:99;height:50px;
-      background:linear-gradient(180deg,rgba(180,220,255,0.85) 0%,rgba(140,195,245,0.7) 45%,rgba(100,165,230,0.75) 50%,rgba(140,195,248,0.65) 100%);
-      border-bottom:1px solid rgba(255,255,255,0.6);
-      box-shadow:0 2px 16px rgba(50,120,200,0.3),inset 0 1px 0 rgba(255,255,255,0.95);
-      backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
-      display:flex;align-items:center;padding:0 10px 0 14px;gap:6px;overflow:hidden;
-    }
-    .logo{
-      font-size:18px;font-weight:700;letter-spacing:.05em;
-      background:linear-gradient(180deg,#fff 0%,#b0d8f8 50%,#5a9fd4 100%);
-      -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
-      text-shadow:none;filter:drop-shadow(0 1px 2px rgba(30,80,160,0.4));
-      display:flex;align-items:center;flex-shrink:0;
-    }
-    .nav-links{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;flex:1;min-width:0}
-    .nav-links::-webkit-scrollbar{display:none}
-    .nav-links button{
-      background:linear-gradient(180deg,rgba(255,255,255,0.7) 0%,rgba(190,225,255,0.5) 100%);
-      border:1px solid rgba(255,255,255,0.8);border-bottom-color:rgba(140,190,240,0.5);
-      border-radius:14px;cursor:pointer;color:var(--text-dark);font-family:inherit;
-      font-size:11.5px;font-weight:600;padding:4px 10px;white-space:nowrap;flex-shrink:0;
-      box-shadow:0 1px 4px rgba(80,140,200,0.15),inset 0 1px 0 rgba(255,255,255,0.9);
-      transition:all .15s;letter-spacing:.02em;
-    }
-    .nav-links button:hover{background:linear-gradient(180deg,rgba(255,255,255,0.9) 0%,rgba(210,235,255,0.7) 100%)}
-    .nav-links button.active{
-      background:linear-gradient(180deg,rgba(100,170,240,0.9) 0%,rgba(50,120,210,0.85) 50%,rgba(80,150,230,0.8) 100%);
-      color:#fff;border-color:rgba(30,100,200,0.5);
-      box-shadow:0 1px 6px rgba(30,100,200,0.35),inset 0 1px 0 rgba(255,255,255,0.35),inset 0 -1px 0 rgba(0,60,150,0.2);
-    }
-    .main{padding-top:66px}
-
-    /* AUTH */
-    .auth{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:20px;gap:10px}
-    .auth-panel{
-      width:100%;max-width:320px;padding:28px 24px;
-      background:linear-gradient(180deg,rgba(255,255,255,0.6) 0%,rgba(210,235,255,0.45) 50%,rgba(185,220,250,0.5) 100%);
-      border:1px solid rgba(255,255,255,0.85);border-bottom-color:rgba(140,195,240,0.5);
-      border-radius:10px;
-      box-shadow:0 8px 32px rgba(60,130,210,0.2),inset 0 1px 0 rgba(255,255,255,0.95),0 1px 0 rgba(255,255,255,0.5);
-      backdrop-filter:blur(16px);
-      display:flex;flex-direction:column;gap:10px;align-items:center;
-    }
-    .auth h1{
-      font-size:26px;font-weight:700;letter-spacing:.04em;margin-bottom:8px;
-      background:linear-gradient(180deg,#fff 0%,#90c8f0 40%,#3a80c8 100%);
-      -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
-      filter:drop-shadow(0 2px 4px rgba(30,80,160,0.3));
-    }
-    .auth-sub{font-size:11px;color:var(--text-light);letter-spacing:.08em;margin-top:-8px;margin-bottom:4px}
-    input{
-      width:100%;max-width:260px;padding:8px 12px;font-family:inherit;font-size:13px;
-      background:linear-gradient(180deg,rgba(220,238,255,0.6) 0%,rgba(255,255,255,0.8) 100%);
-      border:1px solid rgba(140,195,240,0.7);border-top-color:rgba(100,160,220,0.5);
-      border-radius:5px;color:var(--text-dark);outline:none;
-      box-shadow:inset 0 2px 4px rgba(80,140,200,0.12),0 1px 0 rgba(255,255,255,0.8);
-      transition:border .15s,box-shadow .15s;
-    }
-    input:focus{border-color:rgba(50,130,220,0.8);box-shadow:inset 0 2px 4px rgba(50,120,210,0.15),0 0 0 3px rgba(80,160,240,0.18)}
-    input::placeholder{color:#9ab8d0}
-
-    /* AERO BUTTONS */
-    .btn{
-      width:100%;max-width:260px;padding:9px 18px;font-family:inherit;font-size:12px;
-      font-weight:600;letter-spacing:.06em;cursor:pointer;border-radius:20px;
-      background:linear-gradient(180deg,rgba(255,255,255,0.95) 0%,rgba(200,230,255,0.85) 49%,rgba(150,205,250,0.9) 50%,rgba(190,225,255,0.8) 100%);
-      border:1px solid rgba(120,185,240,0.7);
-      color:var(--aero-blue);
-      box-shadow:0 2px 8px rgba(60,130,210,0.25),inset 0 1px 0 rgba(255,255,255,0.95),0 1px 0 rgba(255,255,255,0.6);
-      transition:all .15s;
-    }
-    .btn:hover{
-      background:linear-gradient(180deg,rgba(255,255,255,1) 0%,rgba(220,240,255,0.95) 49%,rgba(170,215,255,0.95) 50%,rgba(210,235,255,0.9) 100%);
-      box-shadow:0 3px 12px rgba(60,130,210,0.35),inset 0 1px 0 rgba(255,255,255,1);
-    }
-    .btn:active{
-      background:linear-gradient(180deg,rgba(140,195,245,0.9) 0%,rgba(100,165,230,0.85) 49%,rgba(80,150,220,0.9) 50%,rgba(120,185,245,0.85) 100%);
-      color:#fff;box-shadow:inset 0 2px 4px rgba(30,80,160,0.2);
-    }
-    .btn-primary{
-      background:linear-gradient(180deg,rgba(100,175,245,0.95) 0%,rgba(60,140,225,0.9) 49%,rgba(40,120,210,0.95) 50%,rgba(80,160,240,0.9) 100%);
-      color:#fff;border-color:rgba(30,100,200,0.6);
-      box-shadow:0 2px 10px rgba(30,100,200,0.35),inset 0 1px 0 rgba(255,255,255,0.45),inset 0 -1px 0 rgba(0,60,160,0.2);
-    }
-    .btn-primary:hover{
-      background:linear-gradient(180deg,rgba(130,195,255,0.98) 0%,rgba(80,160,240,0.95) 49%,rgba(60,140,225,0.98) 50%,rgba(100,175,248,0.95) 100%);
-    }
-    .btn-ghost{background:linear-gradient(180deg,rgba(255,255,255,0.5) 0%,rgba(220,235,250,0.35) 100%);color:var(--text-mid);border-color:rgba(150,195,235,0.5)}
-    .err{color:#c0392b;font-size:11px;max-width:260px;text-align:center;background:rgba(255,220,220,0.5);border-radius:4px;padding:4px 8px}
-
-    /* TIMEOUT BANNER */
-    .timeout-banner{
-      margin:10px 12px 0;border-radius:10px;
-      background:linear-gradient(180deg,rgba(255,230,200,0.75) 0%,rgba(255,200,160,0.6) 100%);
-      border:1px solid rgba(240,160,80,0.6);border-bottom-color:rgba(200,120,40,0.4);
-      box-shadow:0 2px 10px rgba(200,120,40,0.15),inset 0 1px 0 rgba(255,255,255,0.8);
-      padding:12px 16px;display:flex;align-items:center;gap:10px;
-      animation:fadeUp .25s ease;
-    }
-    .timeout-icon{font-size:22px;line-height:1;flex-shrink:0}
-    .timeout-text{flex:1;min-width:0}
-    .timeout-text strong{display:block;font-size:12.5px;color:#7a3800;font-weight:700;margin-bottom:2px}
-    .timeout-text span{font-size:11px;color:#a05010}
-    .timeout-compose-block{
-      pointer-events:none;opacity:0.45;user-select:none;
-    }
-
-    /* COMPOSE */
-    .compose{
-      margin:12px 12px 0;border-radius:10px;
-      background:linear-gradient(180deg,rgba(255,255,255,0.55) 0%,rgba(210,235,255,0.4) 100%);
-      border:1px solid rgba(255,255,255,0.85);border-bottom-color:rgba(140,195,240,0.4);
-      box-shadow:0 4px 16px rgba(80,150,220,0.12),inset 0 1px 0 rgba(255,255,255,0.95);
-      padding:14px 16px;
-    }
-    textarea{
-      width:100%;resize:none;border:none;font-family:inherit;font-size:13px;
-      color:var(--text-dark);background:transparent;outline:none;min-height:52px;
-    }
-    textarea::placeholder{color:#9ab8d0}
-    .compose-footer{display:flex;justify-content:space-between;align-items:center;margin-top:8px;gap:6px;min-width:0}
-    .media-btn{
-      display:flex;align-items:center;gap:4px;padding:5px 9px;font-family:inherit;font-size:11px;
-      font-weight:600;cursor:pointer;border-radius:14px;color:#5a9fd4;white-space:nowrap;flex-shrink:0;
-      background:rgba(100,175,245,0.12);border:1px solid rgba(100,175,245,0.35);
-      transition:all .15s;
-    }
-    .media-btn:hover{background:rgba(100,175,245,0.22)}
-    #media-preview-wrap{margin-top:10px;position:relative;display:inline-block;max-width:100%}
-    #media-preview-wrap img,#media-preview-wrap video{max-width:100%;max-height:280px;border-radius:8px;display:block;border:1px solid rgba(100,175,245,0.3)}
-    #media-clear{position:absolute;top:4px;right:4px;background:rgba(0,0,0,0.55);color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:13px;cursor:pointer;line-height:22px;text-align:center}
-    .post-media{margin-top:8px}
-    .post-media img{max-width:100%;border-radius:8px;display:block;border:1px solid rgba(100,175,245,0.2)}
-    .post-media video{max-width:100%;border-radius:8px;display:block;border:1px solid rgba(100,175,245,0.2)}
-    #media-err{font-size:11px;color:#d94f4f;margin-top:4px}
-
-    /* EMOJI & STICKER PICKER */
-    .picker-btn{
-      display:flex;align-items:center;gap:4px;padding:5px 9px;font-family:inherit;font-size:11px;
-      font-weight:600;cursor:pointer;border-radius:14px;color:#5a9fd4;white-space:nowrap;flex-shrink:0;
-      background:rgba(100,175,245,0.12);border:1px solid rgba(100,175,245,0.35);
-      transition:all .15s;
-    }
-    .picker-btn:hover{background:rgba(100,175,245,0.22)}
-    .picker-btn.active{background:rgba(100,175,245,0.28);border-color:rgba(60,140,220,0.55)}
-    .picker-popup{
-      position:fixed;
-      z-index:500;
-      width:300px;max-height:320px;
-      background:linear-gradient(180deg,rgba(240,250,255,0.97) 0%,rgba(215,235,255,0.96) 100%);
-      border:1px solid rgba(255,255,255,0.9);border-bottom-color:rgba(140,195,240,0.6);
-      border-radius:12px;
-      box-shadow:0 8px 32px rgba(60,130,210,0.22),inset 0 1px 0 rgba(255,255,255,1);
-      backdrop-filter:blur(16px);
-      display:flex;flex-direction:column;overflow:hidden;
-      animation:fadeUp .18s ease;
-    }
-    .picker-tabs{
-      display:flex;border-bottom:1px solid rgba(140,195,240,0.3);flex-shrink:0;
-    }
-    .picker-tab{
-      flex:1;padding:7px 4px;font-family:inherit;font-size:10.5px;font-weight:700;
-      letter-spacing:.07em;text-transform:uppercase;cursor:pointer;
-      background:none;border:none;color:var(--text-light);transition:all .15s;
-    }
-    .picker-tab.active{
-      color:var(--aero-blue);
-      background:linear-gradient(180deg,rgba(255,255,255,0.6) 0%,rgba(210,235,255,0.4) 100%);
-      box-shadow:inset 0 -2px 0 var(--aero-blue2);
-    }
-    .picker-body{overflow-y:auto;flex:1;padding:8px}
-    .picker-grid{
-      display:grid;grid-template-columns:repeat(auto-fill,minmax(44px,1fr));gap:4px;
-    }
-    .picker-item{
-      display:flex;align-items:center;justify-content:center;
-      border-radius:8px;padding:4px;cursor:pointer;
-      transition:background .12s,transform .1s;
-      border:1px solid transparent;
-      aspect-ratio:1;
-    }
-    .picker-item:hover{
-      background:rgba(100,175,245,0.18);border-color:rgba(100,175,245,0.35);
-      transform:scale(1.08);
-    }
-    .picker-item img{width:34px;height:34px;object-fit:contain;display:block;border-radius:4px}
-    .picker-sticker-grid{
-      display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:6px;
-    }
-    .picker-sticker-item{
-      display:flex;align-items:center;justify-content:center;
-      border-radius:10px;padding:5px;cursor:pointer;
-      transition:background .12s,transform .1s;
-      border:1px solid transparent;aspect-ratio:1;
-    }
-    .picker-sticker-item:hover{
-      background:rgba(100,175,245,0.18);border-color:rgba(100,175,245,0.35);
-      transform:scale(1.05);
-    }
-    .picker-sticker-item img{width:60px;height:60px;object-fit:contain;display:block;border-radius:6px}
-    .picker-loading{padding:24px;text-align:center;color:var(--text-light);font-size:11px}
-    .picker-empty{padding:24px;text-align:center;color:var(--text-light);font-size:11px}
-    /* inline emoji in posts */
-    .post-emoji{height:20px;width:20px;object-fit:contain;vertical-align:middle;display:inline-block;margin:0 1px}
-    /* sticker in posts */
-    .post-sticker{max-width:140px;max-height:140px;display:block;margin-top:6px;border-radius:10px}
-    .compose-footer-left{display:flex;gap:5px;align-items:center;overflow-x:auto;flex:1;min-width:0;scrollbar-width:none}
-    .compose-footer-left::-webkit-scrollbar{display:none}
-    .post-btn{
-      padding:6px 18px;font-family:inherit;font-size:11.5px;font-weight:600;cursor:pointer;border-radius:14px;flex-shrink:0;
-      background:linear-gradient(180deg,rgba(100,175,245,0.95) 0%,rgba(60,140,225,0.9) 49%,rgba(40,120,210,0.95) 50%,rgba(80,160,240,0.9) 100%);
-      color:#fff;border:1px solid rgba(30,100,200,0.5);letter-spacing:.04em;
-      box-shadow:0 2px 8px rgba(30,100,200,0.3),inset 0 1px 0 rgba(255,255,255,0.4);
-      transition:all .15s;white-space:nowrap;
-    }
-    .post-btn:hover{box-shadow:0 3px 12px rgba(30,100,200,0.4),inset 0 1px 0 rgba(255,255,255,0.5)}
-
-    /* POST */
-    .post{
-      margin:8px 12px 0;border-radius:10px;
-      background:linear-gradient(180deg,rgba(255,255,255,0.5) 0%,rgba(210,232,255,0.35) 100%);
-      border:1px solid rgba(255,255,255,0.8);border-bottom-color:rgba(140,195,240,0.35);
-      box-shadow:0 2px 10px rgba(80,150,220,0.08),inset 0 1px 0 rgba(255,255,255,0.9);
-      padding:14px 16px;backdrop-filter:blur(8px);
-      animation:fadeUp .25s ease;
-    }
-    @keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
-    .post-meta{display:flex;align-items:baseline;gap:10px;margin-bottom:7px}
-    .post-user{font-weight:700;cursor:pointer;color:var(--aero-blue);font-size:13px;transition:color .1s}
-    .post-user:hover{color:var(--aero-blue2);text-decoration:underline}
-    .post-time{font-size:10.5px;color:var(--text-light)}
-    .post-content{line-height:1.65;color:var(--text-dark);white-space:pre-wrap;word-break:break-word}
-    .post-del{float:right;background:none;border:none;cursor:pointer;color:#aac8e0;font-size:17px;line-height:1;margin-left:8px;transition:color .15s}
-    .post-del:hover{color:#c0392b}
-
-    /* POST ACTIONS — like & comment */
-    .post-actions{
-      display:flex;align-items:center;gap:6px;margin-top:10px;
-      padding-top:8px;border-top:1px solid rgba(140,195,240,0.2);
-    }
-    .action-btn{
-      display:flex;align-items:center;gap:4px;
-      background:none;border:none;cursor:pointer;font-family:inherit;
-      font-size:11.5px;font-weight:600;color:var(--text-light);
-      padding:4px 8px;border-radius:10px;transition:all .15s;
-    }
-    .action-btn:hover{background:rgba(100,175,245,0.12);color:var(--aero-blue)}
-    .action-btn.liked{color:#e05080;}
-    .action-btn.liked:hover{background:rgba(220,80,120,0.1);color:#c03060}
-    .like-heart{font-size:14px;transition:transform .18s;}
-    .action-btn.liked .like-heart{animation:heartPop .25s ease;}
-    @keyframes heartPop{0%{transform:scale(1)}50%{transform:scale(1.45)}100%{transform:scale(1)}}
-    .action-count{font-size:11px;min-width:10px}
-
-    /* COMMENTS SECTION */
-    .comments-section{
-      margin-top:8px;padding-top:8px;
-      border-top:1px solid rgba(140,195,240,0.18);
-      animation:fadeUp .18s ease;
-    }
-    .comment{
-      display:flex;gap:8px;margin-bottom:7px;align-items:flex-start;
-    }
-    .comment-avatar{
-      width:24px;height:24px;border-radius:50%;flex-shrink:0;
-      background:linear-gradient(135deg,rgba(120,185,245,0.9),rgba(50,130,220,0.85));
-      border:1px solid rgba(255,255,255,0.8);
-      display:flex;align-items:center;justify-content:center;
-      font-size:10px;font-weight:700;color:#fff;overflow:hidden;
-    }
-    .comment-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}
-    .comment-body{flex:1;min-width:0;}
-    .comment-meta{display:flex;align-items:baseline;gap:6px;margin-bottom:2px}
-    .comment-user{
-      font-size:11.5px;font-weight:700;color:var(--aero-blue);cursor:pointer;
-    }
-    .comment-user:hover{text-decoration:underline}
-    .comment-time{font-size:10px;color:var(--text-light)}
-    .comment-text{font-size:12px;color:var(--text-dark);line-height:1.5;word-break:break-word;white-space:pre-wrap}
-    .comment-del{
-      background:none;border:none;cursor:pointer;color:#c0d8e8;font-size:13px;
-      padding:0 2px;line-height:1;transition:color .12s;margin-left:4px;flex-shrink:0;
-    }
-    .comment-del:hover{color:#c0392b}
-    .comment-input-row{
-      display:flex;gap:6px;margin-top:6px;align-items:center;
-    }
-    .comment-input{
-      flex:1;padding:6px 10px;font-family:inherit;font-size:12px;border-radius:14px;
-      background:rgba(220,238,255,0.5);border:1px solid rgba(140,195,240,0.5);
-      color:var(--text-dark);outline:none;max-width:100%;width:100%;
-      transition:border .12s,box-shadow .12s;
-    }
-    .comment-input:focus{border-color:rgba(60,140,220,0.7);box-shadow:0 0 0 2px rgba(80,160,240,0.14)}
-    .comment-submit{
-      padding:6px 12px;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;
-      border-radius:14px;border:1px solid rgba(30,100,200,0.4);color:#fff;
-      background:linear-gradient(180deg,rgba(100,175,245,0.95) 0%,rgba(50,130,220,0.9) 100%);
-      transition:all .12s;white-space:nowrap;flex-shrink:0;
-    }
-    .comment-submit:hover{box-shadow:0 2px 8px rgba(30,100,200,0.3)}
-    .comments-load-more{
-      font-size:11px;color:var(--aero-blue);cursor:pointer;background:none;border:none;
-      font-family:inherit;padding:2px 0;font-weight:600;
-    }
-    .comments-load-more:hover{text-decoration:underline}
-/* PROFILE — two-column layout */
-.profile-layout{
-  display:flex;flex-direction:row;align-items:flex-start;
-  gap:10px;margin:12px 12px 0;
-}
-/* LEFT COLUMN — userbars */
-.profile-left-col{
-  flex-shrink:0;
-  display:flex;flex-direction:column;gap:3px;
-  padding:8px 6px;
-  background:none;
-  border-radius:8px;
-  border:none;
-  box-shadow:none;
-  min-width:32px;
-}
-.profile-left-col:empty{display:none}
-/* CENTER COLUMN — holds the card centered */
-.profile-center-col{
-  flex:1;display:flex;justify-content:center;
-}
-/* PROFILE CARD */
-.profile-page{
-  width:100%;max-width:360px;
-  border-radius:14px;overflow:hidden;
-  background:linear-gradient(180deg,rgba(255,255,255,0.52) 0%,rgba(210,235,255,0.38) 100%);
-  border:1px solid rgba(255,255,255,0.85);border-bottom-color:rgba(140,195,240,0.4);
-  box-shadow:0 6px 24px rgba(80,150,220,0.16),inset 0 1px 0 rgba(255,255,255,0.95);
-}
-.profile-hero{overflow:hidden;display:flex;flex-direction:column;align-items:center}
-/* legacy userbars wrapper — hidden, replaced by left col */
-.profile-userbars{display:none}
-.profile-userbars:empty{display:none}
-.profile-userbar{
-  display:block;line-height:0;border-radius:2px;overflow:hidden;
-  box-shadow:0 1px 3px rgba(0,0,0,0.4);
-  transition:opacity .15s,transform .1s,box-shadow .15s;
-}
-.profile-userbar:hover{opacity:.82;transform:translateX(1px);box-shadow:0 2px 6px rgba(0,0,0,0.5)}
-.profile-userbar img{display:block;width:100%;height:auto;max-width:100%}
-.profile-userbars-list{
-  display:flex;flex-direction:column;gap:4px;
-  margin:8px 12px 0;
-}
-/* no-link variant */
-div.profile-userbar{cursor:default}
-.profile-body{
-  flex:1;min-width:0;
-  padding:20px 18px 18px;position:relative;
-  display:flex;flex-direction:column;align-items:center;text-align:center;
-  background:linear-gradient(180deg,rgba(255,255,255,0.15) 0%,rgba(255,255,255,0.0) 100%);
-}
-.profile-avatar{
-  width:64px;height:64px;border-radius:50%;
-  margin-bottom:10px;position:relative;z-index:1;
-  background:linear-gradient(135deg,var(--profile-accent, rgba(120,185,245,0.9)),rgba(50,130,220,0.85));
-  border:2px solid rgba(255,255,255,0.95);
-  box-shadow:0 2px 14px rgba(60,130,210,0.3),inset 0 1px 0 rgba(255,255,255,0.6);
-  display:flex;align-items:center;justify-content:center;font-size:24px;color:#fff;font-weight:700;
-}
-.profile-name{font-size:18px;font-weight:700;color:var(--text-dark);margin-bottom:2px}
-.profile-bio{color:var(--text-light);font-size:12px;font-style:italic;margin:5px 0 4px}
-.profile-stats{display:flex;gap:18px;margin-top:12px;flex-wrap:wrap;justify-content:center}
-.stat{font-size:11px;color:var(--text-light)}
-.stat strong{color:var(--text-dark);font-weight:700;display:block;font-size:15px}
-.profile-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;justify-content:center}
-.follow-btn{
-  margin-top:0;padding:6px 18px;font-size:11.5px;font-weight:600;font-family:inherit;cursor:pointer;
-  border-radius:14px;letter-spacing:.04em;transition:all .15s;
-}
-.following-btn{
-  background:linear-gradient(180deg,rgba(100,175,245,0.95) 0%,rgba(50,130,220,0.9) 50%,rgba(80,155,235,0.9) 100%);
-  color:#fff;border:1px solid rgba(30,100,200,0.5);
-  box-shadow:0 2px 8px rgba(30,100,200,0.3),inset 0 1px 0 rgba(255,255,255,0.35);
-}
-.unfollowing-btn{
-  background:linear-gradient(180deg,rgba(255,255,255,0.9) 0%,rgba(210,235,255,0.8) 100%);
-  color:var(--aero-blue);border:1px solid rgba(120,180,240,0.6);
-  box-shadow:0 2px 6px rgba(80,140,200,0.15),inset 0 1px 0 rgba(255,255,255,0.95);
-}
-.profile-custom-grid{
-  display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:10px;margin-top:14px;
-}
-.profile-widget{
-  display:block;overflow:hidden;border-radius:12px;text-decoration:none;color:inherit;
-  background:linear-gradient(180deg,rgba(255,255,255,0.7) 0%,rgba(220,238,255,0.45) 100%);
-  border:1px solid rgba(255,255,255,0.8);border-bottom-color:rgba(140,195,240,0.35);
-  box-shadow:0 2px 10px rgba(80,150,220,0.08),inset 0 1px 0 rgba(255,255,255,0.9);
-  transition:transform .15s,box-shadow .15s,background .15s;
-}
-.profile-widget:hover{
-  transform:translateY(-1px);
-  box-shadow:0 4px 14px rgba(80,150,220,0.16),inset 0 1px 0 rgba(255,255,255,0.95);
-}
-.profile-widget-image{
-  width:100%;height:84px;display:block;background-size:cover;background-position:center center;
-  background:linear-gradient(135deg,rgba(120,185,245,0.95),rgba(50,130,220,0.85));
-}
-.profile-widget-title{
-  padding:7px 8px;font-size:10.5px;font-weight:700;line-height:1.25;color:var(--text-dark);
-  word-break:break-word;
-}
-.profile-widget-link{
-  padding:0 8px 8px;font-size:10px;color:var(--text-light);word-break:break-word;
-}
-.profile-post-shell{padding-bottom:4px;margin:0 12px}
-.profile-post-shell .post{margin-top:8px;margin-left:0;margin-right:0}
-.tab-bar{
-  display:flex;margin:8px 12px 0;border-radius:8px;overflow:hidden;
-  border:1px solid rgba(255,255,255,0.7);border-bottom-color:rgba(140,195,240,0.4);
-  background:rgba(200,225,250,0.3);
-}
-.tab{
-  flex:1;padding:9px;text-align:center;background:none;border:none;cursor:pointer;
-  font-family:inherit;font-size:11px;letter-spacing:.06em;font-weight:600;color:var(--text-light);
-  transition:all .15s;
-}
-.tab.active{
-  background:linear-gradient(180deg,rgba(255,255,255,0.7) 0%,rgba(210,235,255,0.55) 100%);
-  color:var(--aero-blue);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,0.9);
-}
-
-/* PROFILE EDITOR */
-.profile-editor .settings-divider{margin:18px 0}
-.editor-label{
-  display:block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;
-  color:var(--text-light);margin:4px 0 6px 2px;font-weight:700;
-}
-.profile-editor-grid{
-  display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;
-  margin-bottom:10px;
-}
-.profile-editor-grid input,
-.profile-editor-grid textarea,
-.widget-slot input{
-  width:100%;max-width:100%;
-}
-.widget-editor{
-  display:grid;gap:10px;margin-top:8px;
-}
-.widget-slot{
-  border-radius:10px;padding:10px;
-  background:linear-gradient(180deg,rgba(255,255,255,0.45) 0%,rgba(210,235,255,0.28) 100%);
-  border:1px solid rgba(255,255,255,0.8);border-bottom-color:rgba(140,195,240,0.3);
-  box-shadow:0 2px 8px rgba(80,150,220,0.07),inset 0 1px 0 rgba(255,255,255,0.85);
-}
-.userbar-editor{display:grid;gap:8px;margin-top:8px}
-.userbar-slot{
-  border-radius:8px;padding:8px 10px;
-  background:linear-gradient(180deg,rgba(255,255,255,0.45) 0%,rgba(210,235,255,0.28) 100%);
-  border:1px solid rgba(255,255,255,0.8);border-bottom-color:rgba(140,195,240,0.3);
-  box-shadow:0 2px 8px rgba(80,150,220,0.07),inset 0 1px 0 rgba(255,255,255,0.85);
-}
-.userbar-slot-label{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-light);font-weight:700;margin-bottom:6px}
-.userbar-slot-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-.userbar-preview{margin-top:6px;min-height:36px}
-.userbar-preview img{height:36px;display:block;border-radius:2px}
-.widget-slot-grid{
-  display:grid;grid-template-columns:1fr 1fr;gap:8px;
-}
-.widget-slot-grid .full{grid-column:1/-1}
-.save-note{
-  font-size:10.5px;color:var(--text-light);margin-top:8px;
-}
-
-    /* EXPLORE */
-    .search-bar{margin:12px 12px 0;border-radius:10px;
-      background:linear-gradient(180deg,rgba(255,255,255,0.5) 0%,rgba(210,232,255,0.35) 100%);
-      border:1px solid rgba(255,255,255,0.8);padding:10px 14px;
-      box-shadow:0 2px 10px rgba(80,150,220,0.08),inset 0 1px 0 rgba(255,255,255,0.9);}
-    .search-bar input{max-width:100%;margin:0;border-radius:5px}
-    .user-row{
-      display:flex;align-items:center;justify-content:space-between;
-      padding:11px 16px;margin:8px 12px 0;border-radius:10px;cursor:pointer;
-      background:linear-gradient(180deg,rgba(255,255,255,0.45) 0%,rgba(205,230,255,0.3) 100%);
-      border:1px solid rgba(255,255,255,0.75);border-bottom-color:rgba(140,195,240,0.3);
-      box-shadow:0 2px 8px rgba(80,150,220,0.07),inset 0 1px 0 rgba(255,255,255,0.85);
-      transition:all .15s;
-    }
-    .user-row:hover{background:linear-gradient(180deg,rgba(255,255,255,0.65) 0%,rgba(220,240,255,0.5) 100%);box-shadow:0 4px 14px rgba(80,150,220,0.15)}
-    .user-name{font-weight:700;color:var(--text-dark)}
-    .user-bio{font-size:11px;color:var(--text-light)}
-    .empty{padding:40px 20px;text-align:center;color:var(--text-light);font-size:12px}
-
-    /* SETTINGS */
-    .settings{padding:16px 12px}
-    .settings-panel{
-      border-radius:10px;padding:20px;
-      background:linear-gradient(180deg,rgba(255,255,255,0.55) 0%,rgba(210,235,255,0.4) 100%);
-      border:1px solid rgba(255,255,255,0.85);border-bottom-color:rgba(140,195,240,0.4);
-      box-shadow:0 4px 16px rgba(80,150,220,0.1),inset 0 1px 0 rgba(255,255,255,0.95);
-    }
-    .settings h2{font-size:11px;letter-spacing:.14em;color:var(--text-light);margin-bottom:14px;font-weight:600;text-transform:uppercase}
-    .settings input,.settings textarea{max-width:100%;margin-bottom:10px;width:100%;padding:9px 12px;border-radius:5px;display:block}
-    .settings textarea{min-height:64px;resize:none}
-    .settings .btn{max-width:140px}
-    .settings-divider{border:none;border-top:1px solid rgba(140,190,230,0.3);margin:18px 0}
-
-    /* BOTTOM NAV */
-    .bottom-nav{
-      position:fixed;bottom:0;left:0;right:0;
-      background:linear-gradient(180deg,rgba(180,220,255,0.75) 0%,rgba(145,195,245,0.7) 50%,rgba(110,168,232,0.75) 100%);
-      border-top:1px solid rgba(255,255,255,0.7);
-      box-shadow:0 -2px 16px rgba(60,130,210,0.2),inset 0 1px 0 rgba(255,255,255,0.9);
-      backdrop-filter:blur(14px);
-      display:flex;justify-content:center;gap:0;
-    }
-    .bnav-btn{
-      background:none;border:none;cursor:pointer;font-family:inherit;font-size:11px;
-      letter-spacing:.06em;font-weight:600;color:rgba(30,80,140,0.6);padding:13px 30px;transition:color .15s;
-    }
-    .bnav-btn.active{color:var(--text-dark)}
-
-    /* HEADER STRIPE */
-    .content-header{
-      margin:12px 12px 0;border-radius:10px 10px 0 0;padding:8px 16px;
-      background:linear-gradient(180deg,rgba(100,175,245,0.25) 0%,rgba(60,140,225,0.15) 100%);
-      border:1px solid rgba(255,255,255,0.6);border-bottom:none;
-      font-size:10.5px;letter-spacing:.1em;font-weight:600;color:var(--text-light);text-transform:uppercase;
-    }
-
-    /* WATERMARK glow orbs */
-    body::before{
-      content:'';position:fixed;top:-120px;right:-80px;width:420px;height:420px;
-      background:radial-gradient(circle,rgba(140,200,255,0.35) 0%,transparent 70%);
-      pointer-events:none;z-index:0;
-    }
-    body::after{
-      content:'';position:fixed;bottom:-100px;left:-60px;width:320px;height:320px;
-      background:radial-gradient(circle,rgba(160,215,255,0.3) 0%,transparent 70%);
-      pointer-events:none;z-index:0;
-    }
-    #app{position:relative;z-index:1}
-
-    /* TWO-COLUMN LAYOUT */
-    .two-col-layout{
-      display:flex;flex-direction:row;align-items:flex-start;
-      padding-top:66px;
-    }
-    .news-sidebar{
-      width:170px;flex-shrink:0;
-      position:sticky;top:66px;max-height:calc(100vh - 72px);overflow-y:auto;
-      padding:10px 0 80px 10px;
-      scrollbar-width:none;
-    }
-    .news-sidebar::-webkit-scrollbar{display:none}
-    .main-col{flex:1;min-width:0}
-    .news-sidebar-loading{font-size:11px;color:var(--text-light);padding:12px 10px}
-
-    /* SIDEBAR NEWS PANEL */
-    .snews-wrap{
-      border-radius:10px;overflow:hidden;
-      background:linear-gradient(180deg,rgba(255,255,255,0.55) 0%,rgba(210,235,255,0.4) 100%);
-      border:1px solid rgba(255,255,255,0.85);border-bottom-color:rgba(140,195,240,0.4);
-      box-shadow:0 4px 16px rgba(80,150,220,0.12),inset 0 1px 0 rgba(255,255,255,0.95);
-      margin-bottom:8px;
-    }
-    .snews-header{
-      display:flex;align-items:center;gap:5px;padding:7px 10px;
-      background:linear-gradient(180deg,rgba(100,175,245,0.2) 0%,rgba(60,140,225,0.1) 100%);
-      border-bottom:1px solid rgba(140,195,240,0.25);
-    }
-    .snews-title{font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;font-weight:700;color:var(--text-light)}
-    .snews-count{font-size:9px;color:var(--aero-blue);font-weight:700;margin-left:auto}
-    .snews-body{padding:10px;min-height:50px}
-    .snews-item{animation:newsFade .35s ease}
-    @keyframes newsFade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
-    .snews-item-user{font-size:10px;font-weight:700;color:var(--aero-blue);margin-bottom:2px;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-    .snews-item-user:hover{text-decoration:underline}
-    .snews-item-text{font-size:11.5px;color:var(--text-dark);line-height:1.55;word-break:break-word;white-space:pre-wrap}
-    .snews-item-time{font-size:9.5px;color:var(--text-light);margin-top:4px}
-    .snews-dots{display:flex;gap:4px;margin-top:8px;justify-content:center;flex-wrap:wrap}
-    .snews-dot{
-      width:6px;height:6px;border-radius:50%;cursor:pointer;
-      background:rgba(120,185,245,0.35);border:1px solid rgba(100,175,245,0.4);
-      transition:background .2s;flex-shrink:0;
-    }
-    .snews-dot.active{background:var(--aero-blue2);border-color:var(--aero-blue)}
-    .snews-empty{padding:12px 10px;font-size:11px;color:var(--text-light);text-align:center}
-
-    /* SIDEBAR POINTS */
-    .snews-points{
-      border-radius:10px;
-      background:linear-gradient(180deg,rgba(255,255,255,0.5) 0%,rgba(210,235,255,0.35) 100%);
-      border:1px solid rgba(255,255,255,0.8);border-bottom-color:rgba(140,195,240,0.35);
-      box-shadow:0 2px 8px rgba(80,150,220,0.08),inset 0 1px 0 rgba(255,255,255,0.9);
-      padding:9px 10px;margin-bottom:8px;
-    }
-    .snews-points-label{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-light);font-weight:700;margin-bottom:2px}
-    .snews-points-val{
-      font-size:18px;font-weight:700;
-      background:linear-gradient(180deg,#4da8ff 0%,#1e6bbf 100%);
-      -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
-    }
-    .snews-points-hint{font-size:9.5px;color:var(--text-light);margin-top:1px;line-height:1.4}
-
-    /* SIDEBAR COMPOSE */
-    .snews-compose{
-      border-radius:10px;
-      background:linear-gradient(180deg,rgba(255,255,255,0.5) 0%,rgba(210,235,255,0.35) 100%);
-      border:1px solid rgba(255,255,255,0.8);border-bottom-color:rgba(140,195,240,0.35);
-      box-shadow:0 2px 8px rgba(80,150,220,0.08),inset 0 1px 0 rgba(255,255,255,0.9);
-      padding:9px 10px;margin-bottom:8px;
-    }
-    .snews-compose-label{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-light);font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:4px}
-    .snews-compose-cost{
-      padding:1px 5px;font-size:9px;font-weight:700;color:var(--aero-blue);
-      background:rgba(100,175,245,0.18);border:1px solid rgba(100,175,245,0.35);border-radius:6px;
-    }
-    .snews-compose textarea{
-      width:100%;min-height:52px;resize:vertical;
-      background:rgba(220,238,255,0.45);border:1px solid rgba(140,195,240,0.5);
-      border-radius:5px;padding:6px 8px;font-family:inherit;font-size:11.5px;
-      color:var(--text-dark);outline:none;max-width:100%;line-height:1.5;
-      transition:border .12s;
-    }
-    .snews-compose textarea:focus{border-color:rgba(60,140,220,0.65)}
-    .snews-compose-footer{display:flex;justify-content:space-between;align-items:center;margin-top:5px}
-    .snews-char{font-size:9.5px;color:var(--text-light)}
-    .snews-char.warn{color:#d07020}
-    .snews-send-btn{
-      padding:4px 10px;font-family:inherit;font-size:10px;font-weight:700;cursor:pointer;
-      border-radius:10px;border:1px solid rgba(30,100,200,0.45);color:#fff;
-      background:linear-gradient(180deg,rgba(100,175,245,0.95) 0%,rgba(50,130,220,0.9) 100%);
-      transition:all .12s;white-space:nowrap;
-    }
-    .snews-send-btn:hover{box-shadow:0 2px 6px rgba(30,100,200,0.3)}
-    .snews-send-btn:disabled{opacity:.55;cursor:default}
-    .snews-err{font-size:10px;color:#c0392b;margin-top:4px}
-
-    /* ONLINE PANEL */
-    .online-panel{
-      border-radius:10px;
-      background:linear-gradient(180deg,rgba(255,255,255,0.55) 0%,rgba(210,235,255,0.4) 100%);
-      border:1px solid rgba(255,255,255,0.85);border-bottom-color:rgba(140,195,240,0.4);
-      box-shadow:0 4px 16px rgba(80,150,220,0.12),inset 0 1px 0 rgba(255,255,255,0.95);
-      margin-bottom:8px;overflow:hidden;
-    }
-    .online-header{
-      display:flex;align-items:center;gap:5px;padding:7px 10px;
-      background:linear-gradient(180deg,rgba(100,175,245,0.2) 0%,rgba(60,140,225,0.1) 100%);
-      border-bottom:1px solid rgba(140,195,240,0.25);
-    }
-    .online-title{font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;font-weight:700;color:var(--text-light)}
-    .online-count{
-      font-size:9px;font-weight:700;margin-left:auto;
-      background:rgba(60,200,100,0.18);border:1px solid rgba(60,200,100,0.4);
-      color:#1a8a40;border-radius:8px;padding:1px 5px;
-    }
-    .online-body{padding:8px 10px;min-height:36px}
-    .online-user{
-      display:flex;align-items:center;gap:6px;
-      padding:3px 0;cursor:pointer;border-radius:6px;
-      transition:background .12s;
-    }
-    .online-user:hover{background:rgba(100,175,245,0.12);padding-left:4px;margin-left:-4px}
-    .online-dot{
-      width:7px;height:7px;border-radius:50%;flex-shrink:0;
-      background:radial-gradient(circle at 35% 35%,#6ef0a0,#22c55e);
-      box-shadow:0 0 4px rgba(34,197,94,0.6);
-    }
-    .online-dot.me{background:radial-gradient(circle at 35% 35%,#80d0ff,#3a8ee6);box-shadow:0 0 4px rgba(58,142,230,0.6)}
-    .online-name{font-size:11px;color:var(--text-dark);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-    .online-name.me{color:var(--aero-blue)}
-    .online-empty{font-size:11px;color:var(--text-light);text-align:center;padding:8px 0}
-
-    @media(max-width:620px){
-      #app:has(.two-col-layout){max-width:540px}
-      .two-col-layout{flex-direction:column}
-      .news-sidebar{width:100%;position:static;max-height:none;padding:10px 10px 0}
-      .main-col{width:100%}
-    }
-
-    /* AERO POINTS BADGE (kept for backward compat, hidden) */
-    .aero-points-bar{display:none}
-      margin:12px 12px 0;border-radius:10px;
-      background:linear-gradient(180deg,rgba(255,255,255,0.55) 0%,rgba(200,235,255,0.4) 100%);
-      border:1px solid rgba(255,255,255,0.85);border-bottom-color:rgba(140,195,240,0.4);
-      box-shadow:0 2px 10px rgba(80,150,220,0.1),inset 0 1px 0 rgba(255,255,255,0.95);
-      padding:12px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;
-    }
-  </style>
-</head>
-<body>
-<div id="app"></div>
-
-<script>
-const GITHUB_USER = 'epic22867';
-const GITHUB_REPO = 'repo';
-const GITHUB_BRANCH = 'main';
-const LOGO_URL = `https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/${GITHUB_BRANCH}/logo/removebg.png`;
-
-const $ = s => document.querySelector(s);
-let token = localStorage.getItem('token');
-const _rawMe = localStorage.getItem('me');
-let me = (_rawMe && _rawMe !== 'undefined') ? JSON.parse(_rawMe) : null;
-let view = 'feed', profileUser = null;
-
-async function api(method, path, body) {
-  const r = await fetch(path, {
-    method,
-    headers: { 'Content-Type': 'application/json', ...(token && { Authorization: 'Bearer ' + token }) },
-    body: body ? JSON.stringify(body) : undefined
-  });
-  return r.json();
-}
-
-function timeAgo(d) {
-  const s = Math.floor((Date.now() - new Date(d)) / 1000);
-  if (s < 60) return s + 's';
-  if (s < 3600) return Math.floor(s / 60) + 'm';
-  if (s < 86400) return Math.floor(s / 3600) + 'h';
-  return Math.floor(s / 86400) + 'd';
-}
-
-function escHtml(s) {
-  if (s === null || s === undefined) return '';
-  return String(s)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-
-function normalizeUserbars(input) {
-  let ubs = input;
-  if (typeof ubs === 'string') {
-    try { ubs = JSON.parse(ubs); } catch { ubs = []; }
-  }
-  if (!Array.isArray(ubs)) return [];
-  return ubs.map(u => ({
-    img: String(u?.img || '').trim(),
-    href: String(u?.href || '').trim(),
-  })).filter(u => u.img).slice(0, 8);
-}
-
-function previewUserbar(i) {
-  const img = document.getElementById(`ub${i}-img`)?.value.trim();
-  const preview = document.getElementById(`ub${i}-preview`);
-  if (!preview) return;
-  preview.innerHTML = img ? `<img src="${escHtml(img)}" alt="preview">` : '';
-}
-
-function normalizeWidgets(input) {
-  let widgets = input;
-  if (typeof widgets === 'string') {
-    try { widgets = JSON.parse(widgets); }
-    catch { widgets = []; }
-  }
-  if (!Array.isArray(widgets)) return [];
-  return widgets.map((w) => ({
-    title: String(w?.title || '').trim(),
-    image: String(w?.image || '').trim(),
-    link: String(w?.link || '').trim(),
-  })).filter(w => w.title || w.image || w.link).slice(0, 6);
-}
-
-function profileAccent(user) {
-  const accent = String(user?.accent_color || '').trim();
-  return accent || '#5a9fd4';
-}
-
-function applyProfileMedia(root) {
-  root.querySelectorAll('[data-profile-bg]').forEach((el) => {
-    const bg = String(el.dataset.profileBg || '').trim();
-    if (bg) {
-      document.body.style.backgroundImage = `url("${bg}")`;
-      document.body.style.backgroundSize = 'cover';
-      document.body.style.backgroundPosition = 'center center';
-      document.body.style.backgroundAttachment = 'fixed';
-    }
-  });
-}
-
-async function verifyToken() {
-  if (!token) return;
-  const d = await api('GET', '/api/me');
-  if (d.error) {
-    token = null;
-    me = null;
-    localStorage.clear();
-  } else {
-    me = d;
-    localStorage.setItem('me', JSON.stringify(me));
-  }
-}
-
-function render() {
-  document.body.style.backgroundImage = '';
-  const app = document.getElementById('app');
-  if (!token) { app.innerHTML = renderAuth(); return bindAuth(); }
-  app.innerHTML = renderShell();
-  if (view === 'feed') loadFeed();
-  else if (view === 'explore') loadExplore();
-  else if (view === 'profile' && profileUser) loadProfile(profileUser);
-  else if (view === 'settings') renderSettings();
-}
-
-function renderAuth(mode) {
-  if (mode === 'register') {
-    return `<div class="auth">
-      <div class="auth-panel">
-        <img src="${LOGO_URL}" alt="Aero World" style="width:72px;height:72px;object-fit:contain;filter:drop-shadow(0 2px 8px rgba(30,80,160,0.5));margin-bottom:4px"><h1>Aero World</h1>
-        <p class="auth-sub">create your account</p>
-        <input id="ru" placeholder="choose a username" autocomplete="off">
-        <input id="rp" placeholder="choose a password" type="password">
-        <input id="rp2" placeholder="confirm password" type="password">
-        <button class="btn btn-primary" onclick="doRegister()">Create Account</button>
-        <button class="btn btn-ghost" onclick="showLogin()">← Back to Sign In</button>
-        <p class="err" id="aerr" style="display:none"></p>
-      </div>
-    </div>`;
-  }
-  return `<div class="auth">
-    <div class="auth-panel">
-      <img src="${LOGO_URL}" alt="Aero World" style="width:72px;height:72px;object-fit:contain;filter:drop-shadow(0 2px 8px rgba(30,80,160,0.5));margin-bottom:4px"><h1>Aero World</h1>
-      <p class="auth-sub">connect · share · discover</p>
-      <input id="u" placeholder="username" autocomplete="off">
-      <input id="p" placeholder="password" type="password">
-      <button class="btn btn-primary" onclick="doLogin()">Sign In</button>
-      <button class="btn btn-ghost" onclick="showRegister()">Create Account</button>
-      <p class="err" id="aerr" style="display:none"></p>
-    </div>
-  </div>`;
-}
-
-function showRegister() {
-  document.getElementById('app').innerHTML = renderAuth('register');
-  document.getElementById('rp2').addEventListener('keydown', e => { if (e.key === 'Enter') doRegister(); });
-}
-
-function showLogin() {
-  document.getElementById('app').innerHTML = renderAuth('login');
-  bindAuth();
-}
-
-function bindAuth() {
-  document.getElementById('p').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
-}
-
-async function doLogin() {
-  const el = $('#aerr');
-  const d = await api('POST', '/api/login', { username: $('#u').value.trim(), password: $('#p').value });
-  if (d.error) { el.textContent = d.error; el.style.display = 'block'; return; }
-  token = d.token; me = d.user;
-  localStorage.setItem('token', token); localStorage.setItem('me', JSON.stringify(me));
-  render();
-}
-
-async function doRegister() {
-  const el = $('#aerr');
-  const username = ($('#ru') || $('#u'))?.value.trim();
-  const password = ($('#rp') || $('#p'))?.value;
-  const confirm = $('#rp2')?.value;
-  if (confirm !== undefined && password !== confirm) { el.textContent = 'Passwords do not match.'; el.style.display = 'block'; return; }
-  if (!username) { el.textContent = 'Please enter a username.'; el.style.display = 'block'; return; }
-  if (!password) { el.textContent = 'Please enter a password.'; el.style.display = 'block'; return; }
-  const d = await api('POST', '/api/register', { username, password });
-  if (d.error) { el.textContent = d.error; el.style.display = 'block'; return; }
-  token = d.token; me = d.user;
-  localStorage.setItem('token', token); localStorage.setItem('me', JSON.stringify(me));
-  render();
-}
-
-function getInitial(name) { return name ? name[0].toUpperCase() : '?'; }
-
-function renderShell() {
-  const hasSidebar = (view === 'feed' || view === 'explore');
-  return `<div class="main">
-    <nav>
-      <span class="logo"><img src="${LOGO_URL}" alt="" style="height:32px;width:32px;object-fit:contain;vertical-align:middle;margin-right:6px;filter:drop-shadow(0 1px 3px rgba(30,80,160,0.5))">Aero World</span>
-      <div class="nav-links">
-        <button class="${view === 'feed' ? 'active' : ''}" onclick="goto('feed')">Explore</button>
-        <button class="${view === 'explore' ? 'active' : ''}" onclick="goto('explore')">Notifications</button>
-        <button class="${view === 'profile' && profileUser === me?.username ? 'active' : ''}" onclick="goto('profile', me?.username)">@${escHtml(me?.username || '')}</button>
-        <button class="${view === 'settings' ? 'active' : ''}" onclick="goto('settings')">⚙</button>
-      </div>
-    </nav>
-    ${hasSidebar
-      ? `<div class="two-col-layout">
-           <div class="news-sidebar" id="news-sidebar">
-             <div class="news-sidebar-loading">Loading…</div>
-           </div>
-           <div class="main-col" id="content"></div>
-         </div>`
-      : `<div id="content"></div>`
-    }
-  </div>`;
-}
-
-function goto(v, user) {
-  view = v;
-  if (user) profileUser = user;
-  render();
-}
-
-async function loadFeed() {
-  await fetchPoints();
-  startOnlinePresence();
-  loadNewsSidebar();
-  const content = document.getElementById('content');
-  content.innerHTML = `
-    <div class="compose">
-      <textarea id="ta" placeholder="What's on your mind?" rows="3"></textarea>
-      <div id="media-preview-wrap" style="display:none">
-        <div id="media-preview"></div>
-        <button id="media-clear" onclick="clearMedia()" title="Remove">×</button>
-      </div>
-      <div id="media-err"></div>
-      <div class="compose-footer">
-        <div class="compose-footer-left">
-          <label class="media-btn" title="Attach image or video">
-            📎 Photo / Video
-            <input type="file" id="media-file" accept="image/png,image/jpeg,image/gif,video/mp4" style="display:none" onchange="handleMediaFile(this)">
-          </label>
-          <button class="picker-btn" id="emoji-btn" onclick="togglePicker('emoji')" title="Emoji">😊 Emoji</button>
-          <button class="picker-btn" id="sticker-btn" onclick="togglePicker('sticker')" title="Stickers">🎨 Sticker</button>
-          <div id="picker-popup" style="display:none" class="picker-popup">
-            <div class="picker-tabs" id="picker-tabs"></div>
-            <div class="picker-body" id="picker-body"></div>
-          </div>
-        </div>
-        <button class="post-btn" onclick="submitPost()">Post</button>
-      </div>
-    </div>
-    <div id="posts"></div>`;
-  const posts = await api('GET', '/api/feed');
-  if (!Array.isArray(posts)) { token = null; localStorage.clear(); render(); return; }
-  document.getElementById('posts').innerHTML = posts.length
-    ? posts.map(renderPost).join('')
-    : `<div class="empty">Nothing here yet. Be the first to post!</div>`;
-  // Check & display timeout state on feed load
-  await pollTimeoutStatus();
-  startTimeoutPoller();
-}
-
-async function loadExplore() {
-  startOnlinePresence();
-  loadNewsSidebar();
-  const content = document.getElementById('content');
-  content.innerHTML = `
-    <div class="search-bar"><input id="sq" placeholder="🔍  Search users..." oninput="searchUsers(this.value)"></div>
-    <div id="results"></div>`;
-  const posts = await api('GET', '/api/explore');
-  document.getElementById('results').innerHTML = posts.length
-    ? posts.map(renderPost).join('')
-    : `<div class="empty">No posts yet.</div>`;
-}
-
-async function searchUsers(q) {
-  if (!q.trim()) {
-    const posts = await api('GET', '/api/explore');
-    document.getElementById('results').innerHTML = posts.length
-      ? posts.map(renderPost).join('')
-      : `<div class="empty">No posts yet.</div>`;
-    return;
-  }
-  const users = await api('GET', '/api/search?q=' + encodeURIComponent(q));
-  document.getElementById('results').innerHTML = users.length
-    ? users.map(u => `<div class="user-row" onclick="goto('profile','${escHtml(u.username)}')">
-        <div><div class="user-name">${escHtml(u.username)}</div><div class="user-bio">${escHtml(u.bio || '')}</div></div>
-      </div>`).join('')
-    : `<div class="empty">No users found.</div>`;
-}
-
-function profileWidgetsMarkup(widgets) {
-  const arr = normalizeWidgets(widgets);
-  if (!arr.length) return '';
-  return `<div class="profile-custom-grid">
-    ${arr.map((w) => {
-      const card = `
-        <div class="profile-widget-image" ${w.image ? `data-widget-image="${escHtml(w.image)}"` : ''}></div>
-        <div class="profile-widget-title">${escHtml(w.title || 'Link')}</div>
-        ${w.link ? `<div class="profile-widget-link">${escHtml(w.link)}</div>` : ''}`;
-      return w.link
-        ? `<a class="profile-widget" href="${escHtml(w.link)}" target="_blank" rel="noopener noreferrer">${card}</a>`
-        : `<div class="profile-widget">${card}</div>`;
-    }).join('')}
-  </div>`;
-}
-
-function applyWidgetImages(root) {
-  root.querySelectorAll('[data-widget-image]').forEach((el) => {
-    const url = String(el.dataset.widgetImage || '').trim();
-    if (url) {
-      el.style.backgroundImage = `url("${url}")`;
-    }
-  });
-}
-
-async function loadProfile(username) {
-  const content = document.getElementById('content');
-  const d = await api('GET', '/api/users/' + username);
-  if (d.error) { content.innerHTML = `<div class="empty">User not found.</div>`; return; }
-  const isMe = d.id === me?.id;
-  const accent = profileAccent(d);
-  const widgets = normalizeWidgets(d.profile_widgets);
-  const userbars = normalizeUserbars(d.userbars);
-  content.innerHTML = `
-    <div class="profile-layout">
-      <div class="profile-center-col">
-        <div class="profile-page" data-profile-bg="${escHtml(d.profile_background || '')}" style="--profile-accent:${escHtml(accent)}">
-          <div class="profile-hero">
-            <div class="profile-body">
-              <div class="profile-avatar">${d.avatar_url ? `<img src="${escHtml(d.avatar_url)}" alt="avatar" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : getInitial(d.username)}</div>
-              <div class="profile-name">${escHtml(d.username)}</div>
-              ${d.bio ? `<div class="profile-bio">${escHtml(d.bio)}</div>` : ''}
-              <div class="profile-stats">
-                <div class="stat"><strong>${d.posts.length}</strong>posts</div>
-                <div class="stat"><strong>${d.followers}</strong>followers</div>
-                <div class="stat"><strong>${d.following}</strong>following</div>
-              </div>
-              <div class="profile-actions">
-                ${isMe
-                  ? `<button class="follow-btn unfollowing-btn" onclick="goto('settings')">Edit Profile</button>`
-                  : `<button class="follow-btn ${d.isFollowing ? 'following-btn' : 'unfollowing-btn'}" onclick="toggleFollow(${d.id})">${d.isFollowing ? 'Following ✓' : 'Follow'}</button>`}
-              </div>
-              ${widgets.length ? profileWidgetsMarkup(widgets) : (isMe ? `<div class="save-note">Добавь баннер, фон и карточки в Settings.</div>` : '')}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-    ${userbars.length ? `<div class="profile-userbars-list">
-      ${userbars.map(ub => ub.href
-        ? `<a class="profile-userbar" href="${escHtml(ub.href)}" target="_blank" rel="noopener noreferrer"><img src="${escHtml(ub.img)}" alt="userbar" loading="lazy"></a>`
-        : `<div class="profile-userbar"><img src="${escHtml(ub.img)}" alt="userbar" loading="lazy"></div>`
-      ).join('')}
-    </div>` : ''}
-    <div class="profile-post-shell" id="profile-posts">
-      ${d.posts.length ? d.posts.map(p => renderPost({ ...p, username })).join('') : `<div class="empty">No posts yet.</div>`}
-    </div>`;
-  applyProfileMedia(content);
-  applyWidgetImages(content);
-}
-
-function renderSettings() {
-  const widgets = normalizeWidgets(me?.profile_widgets);
-  const slotCount = 4;
-  const slots = Array.from({ length: slotCount }, (_, i) => widgets[i] || { title: '', image: '', link: '' });
-  const ubSlotCount = 8;
-  const ubSlots = Array.from({ length: ubSlotCount }, (_, i) => normalizeUserbars(me?.userbars)[i] || { img: '', href: '' });
-  const content = document.getElementById('content');
-  content.innerHTML = `
-    <div class="settings">
-      <div class="settings-panel profile-editor">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:2px">
-          <h2 style="margin:0">Edit Profile</h2>
-          <button class="btn btn-primary" onclick="saveProfile()" style="max-width:140px;padding:7px 16px;font-size:11.5px">Save Changes</button>
-        </div>
-        <label class="editor-label">Bio</label>
-        <textarea id="bio-in" placeholder="Your bio...">${escHtml(me?.bio || '')}</textarea>
-
-        <div class="profile-editor-grid">
-          <div>
-            <label class="editor-label">Avatar Image URL</label>
-            <input id="avatar-in" placeholder="https://..." value="${escHtml(me?.avatar_url || '')}">
-          </div>
-          <div>
-            <label class="editor-label">Profile Background URL</label>
-            <input id="bg-in" placeholder="https://..." value="${escHtml(me?.profile_background || '')}">
-          </div>
-          <div>
-            <label class="editor-label">Accent Color</label>
-            <input id="accent-in" placeholder="#5a9fd4" value="${escHtml(me?.accent_color || '#5a9fd4')}">
-          </div>
-        </div>
-
-        <h2>Userbars</h2>
-        <div class="userbar-editor" id="userbar-editor">
-          ${ubSlots.map((ub, i) => `
-            <div class="userbar-slot">
-              <div class="userbar-slot-label">Userbar ${i + 1}</div>
-              <div class="userbar-slot-grid">
-                <input id="ub${i}-img" placeholder="Image URL (gif/png)" value="${escHtml(ub.img || '')}" oninput="previewUserbar(${i})">
-                <input id="ub${i}-href" placeholder="Link URL (optional)" value="${escHtml(ub.href || '')}">
-              </div>
-              <div class="userbar-preview" id="ub${i}-preview">
-                ${ub.img ? `<img src="${escHtml(ub.img)}" alt="preview">` : ''}
-              </div>
-            </div>
-          `).join('')}
-        </div>
-
-        <h2>Linked Image Cards</h2>
-        <div class="widget-editor">
-          ${slots.map((w, i) => `
-            <div class="widget-slot">
-              <h3>Card ${i + 1}</h3>
-              <div class="widget-slot-grid">
-                <input id="w${i}-title" placeholder="Title" value="${escHtml(w.title || '')}">
-                <input id="w${i}-link" placeholder="Link URL" value="${escHtml(w.link || '')}">
-                <input id="w${i}-image" class="full" placeholder="Image URL" value="${escHtml(w.image || '')}">
-              </div>
-            </div>
-          `).join('')}
-        </div>
-
-        <button class="btn btn-ghost" onclick="logout()" style="max-width:140px">Sign Out</button>
-      </div>
-    </div>`;
-}
-
-async function saveProfile() {
-  const widgets = [];
-  for (let i = 0; i < 4; i++) {
-    const title = document.getElementById(`w${i}-title`).value.trim();
-    const image = document.getElementById(`w${i}-image`).value.trim();
-    const link = document.getElementById(`w${i}-link`).value.trim();
-    if (title || image || link) widgets.push({ title, image, link });
-  }
-
-  const userbars = [];
-  for (let i = 0; i < 8; i++) {
-    const img = document.getElementById(`ub${i}-img`).value.trim();
-    const href = document.getElementById(`ub${i}-href`).value.trim();
-    if (img) userbars.push({ img, href });
-  }
-
-  const payload = {
-    bio: document.getElementById('bio-in').value,
-    avatar_url: document.getElementById('avatar-in').value.trim(),
-    profile_background: document.getElementById('bg-in').value.trim(),
-    accent_color: document.getElementById('accent-in').value.trim(),
-    profile_widgets: widgets,
-    userbars,
-  };
-
-  const d = await api('PATCH', '/api/me', payload);
-  if (d.error) return;
-  me = d.user;
-  localStorage.setItem('me', JSON.stringify(me));
-  if (view === 'profile') loadProfile(me.username);
-}
-
-async function toggleFollow(id) {
-  await api('POST', '/api/follow/' + id);
-  loadProfile(profileUser);
-}
-
-function renderPost(p) {
-  const del = p.user_id === me?.id
-    ? `<button class="post-del" onclick="delPost(${p.id},this)" title="Delete">×</button>`
-    : '';
-  let media = '';
-  if (p.media_url) {
-    if (p.media_type === 'video/mp4') {
-      media = `<div class="post-media"><video src="${p.media_url}" controls preload="metadata" style="max-height:360px"></video></div>`;
-    } else if (p.is_sticker) {
-      media = `<div class="post-media"><img class="post-sticker" src="${p.media_url}" alt="sticker" loading="lazy"></div>`;
-    } else {
-      media = `<div class="post-media"><img src="${p.media_url}" alt="media" loading="lazy"></div>`;
-    }
-  }
-  const contentHtml = p.content ? `<div class="post-content">${renderEmojiText(p.content)}</div>` : '';
-  const liked = p.liked || false;
-  const likeCount = p.like_count || 0;
-  const commentCount = p.comment_count || 0;
-  return `<div class="post" id="post-${p.id}">
-    ${del}
-    <div class="post-meta">
-      <span class="post-user" onclick="goto('profile','${escHtml(p.username)}')">${escHtml(p.username)}</span>
-      <span class="post-time">${timeAgo(p.created_at)}</span>
-    </div>
-    ${contentHtml}
-    ${media}
-    <div class="post-actions">
-      <button class="action-btn ${liked ? 'liked' : ''}" id="like-btn-${p.id}" onclick="toggleLike(${p.id})">
-        <span class="like-heart">${liked ? '❤️' : '🤍'}</span>
-        <span class="action-count" id="like-count-${p.id}">${likeCount > 0 ? likeCount : ''}</span>
-      </button>
-      <button class="action-btn" onclick="toggleComments(${p.id})">
-        <span>💬</span>
-        <span class="action-count" id="comment-count-${p.id}">${commentCount > 0 ? commentCount : ''}</span>
-      </button>
-    </div>
-    <div class="comments-section" id="comments-${p.id}" style="display:none"></div>
-  </div>`;
-}
-
-// ── LIKES ─────────────────────────────────────────────────────
-async function toggleLike(postId) {
-  const btn = document.getElementById(`like-btn-${postId}`);
-  const countEl = document.getElementById(`like-count-${postId}`);
-  const isLiked = btn.classList.contains('liked');
-  // Optimistic UI
-  btn.classList.toggle('liked', !isLiked);
-  btn.querySelector('.like-heart').textContent = isLiked ? '🤍' : '❤️';
-  const d = await api('POST', `/api/posts/${postId}/like`);
-  if (d.error) {
-    // Revert on error
-    btn.classList.toggle('liked', isLiked);
-    btn.querySelector('.like-heart').textContent = isLiked ? '❤️' : '🤍';
-    return;
-  }
-  btn.classList.toggle('liked', d.liked);
-  btn.querySelector('.like-heart').textContent = d.liked ? '❤️' : '🤍';
-  countEl.textContent = d.like_count > 0 ? d.like_count : '';
-}
-
-// ── COMMENTS ──────────────────────────────────────────────────
-const _commentsOpen = new Set();
-const COMMENTS_PAGE = 3; // how many to show initially
-
-async function toggleComments(postId) {
-  const section = document.getElementById(`comments-${postId}`);
-  if (!section) return;
-  if (_commentsOpen.has(postId)) {
-    _commentsOpen.delete(postId);
-    section.style.display = 'none';
-    section.innerHTML = '';
-  } else {
-    _commentsOpen.add(postId);
-    section.style.display = 'block';
-    await loadComments(postId);
-  }
-}
-
-async function loadComments(postId) {
-  const section = document.getElementById(`comments-${postId}`);
-  if (!section) return;
-  section.innerHTML = `<div style="font-size:11px;color:var(--text-light);padding:4px 0">Loading…</div>`;
-  // Refresh me to get latest avatar
-  try { const fresh = await api('GET', '/api/me'); if (fresh && !fresh.error) me = fresh; } catch {}
-  const comments = await api('GET', `/api/posts/${postId}/comments`);
-  if (!Array.isArray(comments)) { section.innerHTML = ''; return; }
-  renderComments(postId, comments);
-}
-
-function renderComments(postId, comments) {
-  const section = document.getElementById(`comments-${postId}`);
-  if (!section) return;
-  const countEl = document.getElementById(`comment-count-${postId}`);
-  if (countEl) countEl.textContent = comments.length > 0 ? comments.length : '';
-
-  const visible = comments.slice(0, COMMENTS_PAGE);
-  const hidden  = comments.slice(COMMENTS_PAGE);
-
-  // Current user avatar — always fresh from me object
-  const myAvatar = me?.avatar_url
-    ? `<img src="${escHtml(me.avatar_url)}" alt="">`
-    : getInitial(me?.username);
-
-  const showMoreBtn = hidden.length > 0
-    ? `<button class="comments-load-more" id="show-more-${postId}" onclick="showMoreComments(${postId})">
-        ↓ Show ${hidden.length} more comment${hidden.length > 1 ? 's' : ''}
-       </button>`
-    : '';
-
-  section.innerHTML = `
-    <div id="comment-list-${postId}">
-      ${visible.length ? visible.map(c => renderComment(postId, c)).join('') : `<div style="font-size:11px;color:var(--text-light);padding:2px 0 6px">No comments yet</div>`}
-    </div>
-    ${showMoreBtn}
-    <div class="comment-input-row">
-      <div class="comment-avatar" id="my-avatar-${postId}">${myAvatar}</div>
-      <input class="comment-input" id="comment-input-${postId}" placeholder="Add a comment…" maxlength="500"
-        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();submitComment(${postId})}">
-      <button class="comment-submit" onclick="submitComment(${postId})">Send</button>
-    </div>`;
-
-  // Store hidden comments on the section element for show more
-  section._hiddenComments = hidden;
-  section._postId = postId;
-}
-
-function showMoreComments(postId) {
-  const section = document.getElementById(`comments-${postId}`);
-  if (!section || !section._hiddenComments) return;
-  const list = document.getElementById(`comment-list-${postId}`);
-  section._hiddenComments.forEach(c => {
-    list.insertAdjacentHTML('beforeend', renderComment(postId, c));
-  });
-  section._hiddenComments = [];
-  document.getElementById(`show-more-${postId}`)?.remove();
-}
-
-function renderComment(postId, c) {
-  const canDel = c.user_id === me?.id;
-  const avatar = c.avatar_url
-    ? `<img src="${escHtml(c.avatar_url)}" alt="">`
-    : getInitial(c.username);
-  return `<div class="comment" id="comment-item-${c.id}">
-    <div class="comment-avatar">${avatar}</div>
-    <div class="comment-body">
-      <div class="comment-meta">
-        <span class="comment-user" onclick="goto('profile','${escHtml(c.username)}')">${escHtml(c.username)}</span>
-        <span class="comment-time">${timeAgo(c.created_at)}</span>
-        ${canDel ? `<button class="comment-del" onclick="deleteComment(${postId},${c.id})" title="Delete">×</button>` : ''}
-      </div>
-      <div class="comment-text">${renderEmojiText(c.content)}</div>
-    </div>
-  </div>`;
-}
-
-async function submitComment(postId) {
-  const input = document.getElementById(`comment-input-${postId}`);
-  const text = input.value.trim();
-  if (!text) return;
-  input.value = '';
-  const c = await api('POST', `/api/posts/${postId}/comments`, { content: text });
-  if (c.error) { input.value = text; return; }
-  const list = document.getElementById(`comment-list-${postId}`);
-  if (list) {
-    // Remove "no comments" placeholder if present
-    const placeholder = list.querySelector('div');
-    if (placeholder && !placeholder.id) placeholder.remove();
-    list.insertAdjacentHTML('beforeend', renderComment(postId, c));
-  }
-  // Update counter
-  const countEl = document.getElementById(`comment-count-${postId}`);
-  if (countEl) {
-    const cur = parseInt(countEl.textContent) || 0;
-    countEl.textContent = cur + 1;
-  }
-  // Also update my avatar in input row in case it just loaded
-  const myAvatarEl = document.getElementById(`my-avatar-${postId}`);
-  if (myAvatarEl && me?.avatar_url) {
-    myAvatarEl.innerHTML = `<img src="${escHtml(me.avatar_url)}" alt="">`;
-  }
-  registerActivity();
-}
-
-async function deleteComment(postId, commentId) {
-  await api('DELETE', `/api/comments/${commentId}`);
-  document.getElementById(`comment-item-${commentId}`)?.remove();
-  const countEl = document.getElementById(`comment-count-${postId}`);
-  if (countEl) {
-    const cur = parseInt(countEl.textContent) || 1;
-    countEl.textContent = cur - 1 > 0 ? cur - 1 : '';
-  }
-}
-
-let _pendingMedia = null; // { dataUrl, type }
-
-function handleMediaFile(input) {
-  const file = input.files[0];
-  const err = document.getElementById('media-err');
-  err.textContent = '';
-  if (!file) return;
-
-  const MAX = 25 * 1024 * 1024;
-  if (file.size > MAX) { err.textContent = 'File too large (max 25 MB)'; input.value=''; return; }
-
-  const ALLOWED = ['image/png','image/jpeg','image/gif','video/mp4'];
-  if (!ALLOWED.includes(file.type)) { err.textContent = 'Only PNG, JPG, GIF, MP4 allowed'; input.value=''; return; }
-
-  const reader = new FileReader();
-  reader.onload = e => {
-    if (file.type === 'video/mp4') {
-      // Check duration via a temp video element
-      const vid = document.createElement('video');
-      vid.preload = 'metadata';
-      vid.onloadedmetadata = () => {
-        URL.revokeObjectURL(vid.src);
-        if (vid.duration > 180) {
-          err.textContent = 'Video too long (max 3 minutes)';
-          input.value = '';
-          return;
-        }
-        _pendingMedia = { dataUrl: e.target.result, type: file.type };
-        showMediaPreview(file.type, e.target.result);
-      };
-      vid.src = URL.createObjectURL(file);
-    } else {
-      _pendingMedia = { dataUrl: e.target.result, type: file.type };
-      showMediaPreview(file.type, e.target.result);
-    }
-  };
-  reader.readAsDataURL(file);
-}
-
-function showMediaPreview(type, src) {
-  const wrap = document.getElementById('media-preview-wrap');
-  const preview = document.getElementById('media-preview');
-  if (type === 'video/mp4') {
-    preview.innerHTML = `<video src="${src}" controls style="max-height:200px;border-radius:8px;max-width:100%"></video>`;
-  } else {
-    preview.innerHTML = `<img src="${src}" style="max-height:${_pendingMedia?.isSticker ? '100px' : '200px'};border-radius:8px;max-width:100%">`;
-  }
-  wrap.style.display = 'inline-block';
-}
-
-function clearMedia() {
-  _pendingMedia = null;
-  document.getElementById('media-preview-wrap').style.display = 'none';
-  document.getElementById('media-preview').innerHTML = '';
-  document.getElementById('media-file').value = '';
-  document.getElementById('media-err').textContent = '';
-}
-
-// ── EMOJI / STICKER PICKER ────────────────────────────────────
-const GITHUB_API_BASE = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents`;
-const RAW_BASE = `https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/${GITHUB_BRANCH}`;
-
-let _pickerCache = { emoji: null, sticker: null }; // null = not loaded, [] = loaded
-let _pickerOpen = null; // 'emoji' | 'sticker' | null
-
-const IMAGE_EXTS = new Set(['png','gif','jpg','jpeg','webp']);
-
-function pickerFileUrl(folder, filename) {
-  return `${RAW_BASE}/${folder}/${encodeURIComponent(filename)}`;
-}
-
-async function fetchPickerFiles(folder) {
-  if (_pickerCache[folder]) return _pickerCache[folder];
+import express from 'express';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import pkg from 'pg';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+const { Pool } = pkg;
+const app = express();
+const SECRET = process.env.JWT_SECRET || 'changeme';
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+const connStr = (() => {
+  const internal = process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.POSTGRESQL_URL;
+  const pub = process.env.DATABASE_PUBLIC_URL || process.env.POSTGRES_PUBLIC_URL;
+  // Prefer public URL if internal hostname is a .railway.internal address,
+  // since private networking may not be available in all Railway environments.
+  if (internal && internal.includes('.railway.internal') && pub) return pub;
+  return internal || pub;
+})();
+
+if (!connStr) {
+  console.error('ERROR: No database URL found. Set DATABASE_URL or DATABASE_PUBLIC_URL variable.');
+  process.exit(1);
+}
+
+const isInternal = connStr.includes('.railway.internal');
+const pool = new Pool({
+  connectionString: connStr,
+  ...(isInternal ? {} : { ssl: { rejectUnauthorized: false } })
+});
+
+await pool.query(`
+  CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    username TEXT UNIQUE NOT NULL,
+    password TEXT NOT NULL,
+    bio TEXT DEFAULT '',
+    banner_url TEXT DEFAULT '',
+    profile_background TEXT DEFAULT '',
+    accent_color TEXT DEFAULT '#4da3ff',
+    profile_theme TEXT DEFAULT 'aero',
+    profile_widgets JSONB DEFAULT '[]'::jsonb,
+    userbars JSONB DEFAULT '[]'::jsonb,
+    avatar_url TEXT DEFAULT '',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  );
+
+  CREATE TABLE IF NOT EXISTS posts (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    content TEXT NOT NULL DEFAULT '',
+    media_url TEXT DEFAULT '',
+    media_type TEXT DEFAULT '',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  );
+
+  CREATE TABLE IF NOT EXISTS follows (
+    follower INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    following INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    PRIMARY KEY (follower, following)
+  );
+
+  CREATE TABLE IF NOT EXISTS timeouts (
+    user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    expires_at TIMESTAMPTZ NOT NULL,
+    reason TEXT DEFAULT ''
+  );
+
+  CREATE TABLE IF NOT EXISTS likes (
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    post_id INTEGER REFERENCES posts(id) ON DELETE CASCADE,
+    PRIMARY KEY (user_id, post_id)
+  );
+
+  CREATE TABLE IF NOT EXISTS comments (
+    id SERIAL PRIMARY KEY,
+    post_id INTEGER REFERENCES posts(id) ON DELETE CASCADE,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    content TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  );
+
+  CREATE TABLE IF NOT EXISTS news (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    username TEXT NOT NULL,
+    content TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  );
+
+  CREATE TABLE IF NOT EXISTS notifications (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    from_user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    from_username TEXT NOT NULL,
+    type TEXT NOT NULL,
+    post_id INTEGER REFERENCES posts(id) ON DELETE CASCADE,
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  );
+`);
+
+// In-memory rate limit tracker: userId -> array of post timestamps (ms)
+const postTimestamps = new Map();
+const RATE_WINDOW_MS = 20 * 1000;   // 20 seconds
+const RATE_MAX_POSTS = 4;            // max posts per window
+const AUTO_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+
+const safeAlterQueries = [
+  `ALTER TABLE users ADD COLUMN IF NOT EXISTS banner_url TEXT DEFAULT ''`,
+  `ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_background TEXT DEFAULT ''`,
+  `ALTER TABLE users ADD COLUMN IF NOT EXISTS accent_color TEXT DEFAULT '#4da3ff'`,
+  `ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_theme TEXT DEFAULT 'aero'`,
+  `ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_widgets JSONB DEFAULT '[]'::jsonb`,
+  `ALTER TABLE users ADD COLUMN IF NOT EXISTS userbars JSONB DEFAULT '[]'::jsonb`,
+  `ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT DEFAULT ''`,
+  `ALTER TABLE posts ADD COLUMN IF NOT EXISTS media_url TEXT DEFAULT ''`,
+  `ALTER TABLE posts ADD COLUMN IF NOT EXISTS media_type TEXT DEFAULT ''`,
+  `ALTER TABLE posts ADD COLUMN IF NOT EXISTS is_sticker BOOLEAN DEFAULT FALSE`,
+  `ALTER TABLE users ADD COLUMN IF NOT EXISTS aero_points INTEGER DEFAULT 0`,
+  `ALTER TABLE users ADD COLUMN IF NOT EXISTS activity_count INTEGER DEFAULT 0`,
+];
+
+for (const q of safeAlterQueries) {
+  await pool.query(q);
+}
+
+app.use(express.json({ limit: '35mb' }));
+app.use(express.static('public'));
+
+app.get('/', (req, res) => {
+  res.sendFile(join(__dirname, 'public', 'index.html'));
+});
+
+const auth = (req, res, next) => {
   try {
-    const r = await fetch(`${GITHUB_API_BASE}/${folder}?ref=${GITHUB_BRANCH}`, {
-      headers: { Accept: 'application/vnd.github+json' }
+    req.user = jwt.verify((req.headers.authorization || '').split(' ')[1], SECRET);
+    next();
+  } catch {
+    res.status(401).json({ error: 'Unauthorized' });
+  }
+};
+
+app.post('/api/register', async (req, res) => {
+  const { username, password } = req.body;
+
+  if (!username || !password) {
+    return res.status(400).json({ error: 'Required fields missing' });
+  }
+
+  try {
+    const hash = await bcrypt.hash(password, 10);
+
+    const { rows } = await pool.query(
+      `INSERT INTO users (username, password)
+       VALUES ($1, $2)
+       RETURNING id, username, bio, banner_url, profile_background,
+       accent_color, profile_theme, profile_widgets, userbars, avatar_url, created_at`,
+      [username, hash]
+    );
+
+    const user = rows[0];
+
+    res.json({
+      token: jwt.sign(user, SECRET, { expiresIn: '30d' }),
+      user
     });
-    if (!r.ok) { _pickerCache[folder] = []; return []; }
-    const data = await r.json();
-    const files = (Array.isArray(data) ? data : [])
-      .filter(f => f.type === 'file' && IMAGE_EXTS.has(f.name.split('.').pop().toLowerCase()))
-      .map(f => f.name);
-    _pickerCache[folder] = files;
-    return files;
-  } catch { _pickerCache[folder] = []; return []; }
-}
+  } catch (e) {
+    if (e.code === '23505') {
+      return res.status(409).json({ error: 'Username already taken' });
+    }
 
-function emojiTag(filename) {
-  // strip extension for the tag name
-  return ':' + filename.replace(/\.[^.]+$/, '') + ':';
-}
-
-function renderPickerGrid(folder, files, mode) {
-  const body = document.getElementById('picker-body');
-  if (!files.length) {
-    body.innerHTML = `<div class="picker-empty">No ${mode}s found in /${folder}/</div>`;
-    return;
-  }
-  if (mode === 'emoji') {
-    body.innerHTML = `<div class="picker-grid">${files.map(f => {
-      const url = pickerFileUrl(folder, f);
-      const tag = emojiTag(f);
-      return `<div class="picker-item" title="${tag}" onclick="insertEmoji('${tag}')"><img src="${url}" alt="${tag}" loading="lazy"></div>`;
-    }).join('')}</div>`;
-  } else {
-    body.innerHTML = `<div class="picker-sticker-grid">${files.map(f => {
-      const url = pickerFileUrl(folder, f);
-      return `<div class="picker-sticker-item" title="${f}" onclick="insertSticker('${url}', '${f}')"><img src="${url}" alt="${f}" loading="lazy"></div>`;
-    }).join('')}</div>`;
-  }
-}
-
-async function openPicker(mode) {
-  const popup = document.getElementById('picker-popup');
-  const body = document.getElementById('picker-body');
-  const tabs = document.getElementById('picker-tabs');
-
-  // Tabs
-  tabs.innerHTML = `
-    <button class="picker-tab ${mode==='emoji'?'active':''}" onclick="switchPickerTab('emoji')">😊 Emoji</button>
-    <button class="picker-tab ${mode==='sticker'?'active':''}" onclick="switchPickerTab('sticker')">🎨 Stickers</button>`;
-
-  body.innerHTML = `<div class="picker-loading">Loading…</div>`;
-  popup.style.display = 'flex';
-
-  const files = await fetchPickerFiles(mode);
-  renderPickerGrid(mode, files, mode);
-}
-
-async function switchPickerTab(mode) {
-  _pickerOpen = mode;
-  document.querySelectorAll('.picker-tab').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.picker-tab')[mode === 'emoji' ? 0 : 1]?.classList.add('active');
-  document.getElementById('emoji-btn')?.classList.toggle('active', mode === 'emoji');
-  document.getElementById('sticker-btn')?.classList.toggle('active', mode === 'sticker');
-  const triggerBtn = document.getElementById(mode === 'emoji' ? 'emoji-btn' : 'sticker-btn');
-  positionPicker(triggerBtn);
-  const body = document.getElementById('picker-body');
-  body.innerHTML = `<div class="picker-loading">Loading…</div>`;
-  const files = await fetchPickerFiles(mode);
-  renderPickerGrid(mode, files, mode);
-}
-
-function positionPicker(triggerBtn) {
-  const popup = document.getElementById('picker-popup');
-  const rect = triggerBtn.getBoundingClientRect();
-  const popupW = 300;
-  const popupH = 320;
-  const margin = 6;
-  const vw = window.innerWidth;
-  const vh = window.innerHeight;
-
-  // Prefer opening downward; if not enough space, open upward
-  let top, left;
-  if (rect.bottom + popupH + margin <= vh) {
-    top = rect.bottom + margin;
-  } else {
-    top = rect.top - popupH - margin;
-  }
-  // Align left with button, clamp to viewport
-  left = rect.left;
-  if (left + popupW > vw - 8) left = vw - popupW - 8;
-  if (left < 8) left = 8;
-
-  popup.style.top = top + 'px';
-  popup.style.left = left + 'px';
-  popup.style.width = popupW + 'px';
-}
-
-function togglePicker(mode) {
-  const popup = document.getElementById('picker-popup');
-  const triggerBtn = document.getElementById(mode === 'emoji' ? 'emoji-btn' : 'sticker-btn');
-  if (_pickerOpen === mode && popup.style.display !== 'none') {
-    closePicker(); return;
-  }
-  _pickerOpen = mode;
-  document.getElementById('emoji-btn')?.classList.toggle('active', mode === 'emoji');
-  document.getElementById('sticker-btn')?.classList.toggle('active', mode === 'sticker');
-  popup.style.display = 'flex';
-  positionPicker(triggerBtn);
-  openPicker(mode);
-}
-
-function closePicker() {
-  _pickerOpen = null;
-  const popup = document.getElementById('picker-popup');
-  if (popup) popup.style.display = 'none';
-  document.getElementById('emoji-btn')?.classList.remove('active');
-  document.getElementById('sticker-btn')?.classList.remove('active');
-}
-
-// Close picker when clicking outside
-document.addEventListener('click', (e) => {
-  if (!_pickerOpen) return;
-  const popup = document.getElementById('picker-popup');
-  if (!popup) return;
-  const emojiBtn = document.getElementById('emoji-btn');
-  const stickerBtn = document.getElementById('sticker-btn');
-  if (!popup.contains(e.target) && e.target !== emojiBtn && e.target !== stickerBtn
-      && !emojiBtn?.contains(e.target) && !stickerBtn?.contains(e.target)) {
-    closePicker();
+    console.error(e);
+    res.status(500).json({ error: 'Server error' });
   }
 });
 
-function insertEmoji(tag) {
-  const ta = document.getElementById('ta');
-  if (!ta) return;
-  const start = ta.selectionStart, end = ta.selectionEnd;
-  ta.value = ta.value.slice(0, start) + tag + ta.value.slice(end);
-  ta.selectionStart = ta.selectionEnd = start + tag.length;
-  ta.focus();
-}
+app.post('/api/login', async (req, res) => {
+  const { username, password } = req.body;
 
-function insertSticker(url, filename) {
-  // Stickers post as media_url (image) immediately when user clicks Post
-  _pendingMedia = { dataUrl: url, type: 'image/gif', isSticker: true, filename };
-  showMediaPreview('image/gif', url);
-  closePicker();
-}
+  const { rows } = await pool.query(
+    'SELECT * FROM users WHERE username=$1',
+    [username]
+  );
 
-// Render :emoji_name: tags in post text as inline images
-function renderEmojiText(text) {
-  return escHtml(text).replace(/:([a-zA-Z0-9_\-]+):/g, (match, name) => {
-    const url = `${RAW_BASE}/emoji/${encodeURIComponent(name)}.gif`;
-    const urlPng = `${RAW_BASE}/emoji/${encodeURIComponent(name)}.png`;
-    // Try gif first, fallback to png via onerror
-    return `<img class="post-emoji" src="${url}" alt="${match}" title="${match}" onerror="this.src='${urlPng}';this.onerror=null">`;
+  const user = rows[0];
+
+  if (!user || !(await bcrypt.compare(password, user.password))) {
+    return res.status(401).json({ error: 'Invalid credentials' });
+  }
+
+  const { password: _, ...safe } = user;
+
+  res.json({
+    token: jwt.sign(safe, SECRET, { expiresIn: '30d' }),
+    user: safe
   });
+});
+
+app.get('/api/feed', auth, async (req, res) => {
+  const { rows } = await pool.query(`
+    SELECT p.*, u.username, u.accent_color, u.banner_url,
+           COUNT(DISTINCT l.user_id)::int AS like_count,
+           BOOL_OR(l.user_id = $1) AS liked,
+           COUNT(DISTINCT c.id)::int AS comment_count
+    FROM posts p
+    JOIN users u ON u.id = p.user_id
+    LEFT JOIN likes l ON l.post_id = p.id
+    LEFT JOIN comments c ON c.post_id = p.id
+    WHERE p.user_id = $1
+       OR p.user_id IN (SELECT following FROM follows WHERE follower = $1)
+    GROUP BY p.id, u.username, u.accent_color, u.banner_url
+    ORDER BY p.id DESC
+    LIMIT 100
+  `, [req.user.id]);
+  res.json(rows);
+});
+
+app.get('/api/explore', auth, async (req, res) => {
+  const { rows } = await pool.query(`
+    SELECT p.*, u.username, u.accent_color, u.banner_url,
+           COUNT(DISTINCT l.user_id)::int AS like_count,
+           BOOL_OR(l.user_id = $1) AS liked,
+           COUNT(DISTINCT c.id)::int AS comment_count
+    FROM posts p
+    JOIN users u ON u.id = p.user_id
+    LEFT JOIN likes l ON l.post_id = p.id
+    LEFT JOIN comments c ON c.post_id = p.id
+    GROUP BY p.id, u.username, u.accent_color, u.banner_url
+    ORDER BY p.id DESC
+    LIMIT 50
+  `, [req.user.id]);
+  res.json(rows);
+});
+
+// Helper: check if user is currently timed out. Returns { timedOut, expiresAt, reason } or null.
+async function getUserTimeout(userId) {
+  const { rows } = await pool.query(
+    'SELECT expires_at, reason FROM timeouts WHERE user_id=$1 AND expires_at > NOW()',
+    [userId]
+  );
+  if (!rows[0]) return null;
+  return { expiresAt: rows[0].expires_at, reason: rows[0].reason };
 }
 
-
-let _timeoutState = null; // { expiresAt: Date, reason: string } or null
-let _timeoutInterval = null;
-
-function formatTimeLeft(expiresAt) {
-  const secs = Math.max(0, Math.ceil((new Date(expiresAt) - Date.now()) / 1000));
-  if (secs <= 0) return '0s';
-  const m = Math.floor(secs / 60), s = secs % 60;
-  return m > 0 ? `${m}m ${s}s` : `${s}s`;
+// Helper: apply a timeout to a user
+async function applyTimeout(userId, durationMs, reason = '') {
+  const expiresAt = new Date(Date.now() + durationMs);
+  await pool.query(
+    `INSERT INTO timeouts (user_id, expires_at, reason)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (user_id) DO UPDATE SET expires_at=$2, reason=$3`,
+    [userId, expiresAt, reason]
+  );
 }
 
-function renderTimeoutBanner(expiresAt, reason) {
-  const existing = document.getElementById('timeout-banner');
-  const msg = reason ? `Reason: ${escHtml(reason)}` : 'Please wait before posting again.';
-  const html = `<div class="timeout-banner" id="timeout-banner">
-    <div class="timeout-icon">⏳</div>
-    <div class="timeout-text">
-      <strong>You are timed out — <span id="timeout-countdown">${formatTimeLeft(expiresAt)}</span> remaining</strong>
-      <span>${msg}</span>
-    </div>
-  </div>`;
-  if (existing) { existing.outerHTML = html; }
-  else {
-    const compose = document.querySelector('.compose');
-    if (compose) { compose.insertAdjacentHTML('beforebegin', html); compose.classList.add('timeout-compose-block'); }
+// GET /api/me/timeout — frontend polls this to know if user is timed out
+app.get('/api/me/timeout', auth, async (req, res) => {
+  const t = await getUserTimeout(req.user.id);
+  res.json(t ? { timedOut: true, expiresAt: t.expiresAt, reason: t.reason } : { timedOut: false });
+});
+
+// POST /api/admin/timeout — manually time out a user (requires admin secret header)
+app.post('/api/admin/timeout', async (req, res) => {
+  const adminSecret = process.env.ADMIN_SECRET || 'admin-secret-changeme';
+  if (req.headers['x-admin-secret'] !== adminSecret) {
+    return res.status(403).json({ error: 'Forbidden' });
   }
-}
+  const { username, duration_minutes, reason } = req.body;
+  if (!username || !duration_minutes) {
+    return res.status(400).json({ error: 'username and duration_minutes required' });
+  }
+  const { rows } = await pool.query('SELECT id FROM users WHERE username=$1', [username]);
+  if (!rows[0]) return res.status(404).json({ error: 'User not found' });
+  const ms = parseInt(duration_minutes) * 60 * 1000;
+  await applyTimeout(rows[0].id, ms, reason || '');
+  res.json({ ok: true, username, expires_at: new Date(Date.now() + ms) });
+});
 
-function clearTimeoutBanner() {
-  document.getElementById('timeout-banner')?.remove();
-  document.querySelector('.compose')?.classList.remove('timeout-compose-block');
-}
+// DELETE /api/admin/timeout — remove a timeout early
+app.delete('/api/admin/timeout', async (req, res) => {
+  const adminSecret = process.env.ADMIN_SECRET || 'admin-secret-changeme';
+  if (req.headers['x-admin-secret'] !== adminSecret) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+  const { username } = req.body;
+  if (!username) return res.status(400).json({ error: 'username required' });
+  const { rows } = await pool.query('SELECT id FROM users WHERE username=$1', [username]);
+  if (!rows[0]) return res.status(404).json({ error: 'User not found' });
+  await pool.query('DELETE FROM timeouts WHERE user_id=$1', [rows[0].id]);
+  res.json({ ok: true });
+});
 
-async function pollTimeoutStatus() {
-  try {
-    const d = await api('GET', '/api/me/timeout');
-    if (d.timedOut) {
-      _timeoutState = { expiresAt: d.expiresAt, reason: d.reason };
-      renderTimeoutBanner(d.expiresAt, d.reason);
-    } else {
-      _timeoutState = null;
-      clearTimeoutBanner();
+app.post('/api/posts', auth, async (req, res) => {
+  // 1. Check for active manual/auto timeout in DB
+  const activeTimeout = await getUserTimeout(req.user.id);
+  if (activeTimeout) {
+    return res.status(429).json({
+      error: 'timeout',
+      expiresAt: activeTimeout.expiresAt,
+      reason: activeTimeout.reason || ''
+    });
+  }
+
+  // 2. Rate-limit: max 4 posts per 20 seconds → auto 5-min timeout
+  const now = Date.now();
+  const uid = req.user.id;
+  const stamps = (postTimestamps.get(uid) || []).filter(t => now - t < RATE_WINDOW_MS);
+  if (stamps.length >= RATE_MAX_POSTS) {
+    await applyTimeout(uid, AUTO_TIMEOUT_MS, 'Posting too fast');
+    postTimestamps.delete(uid);
+    return res.status(429).json({
+      error: 'timeout',
+      expiresAt: new Date(now + AUTO_TIMEOUT_MS),
+      reason: 'Posting too fast'
+    });
+  }
+  stamps.push(now);
+  postTimestamps.set(uid, stamps);
+
+  const { content, media_url, media_type, is_sticker } = req.body;
+
+  if (!content?.trim() && !media_url) {
+    return res.status(400).json({ error: 'Post is empty' });
+  }
+
+  // Stickers are remote URLs from GitHub — skip base64 size check
+  if (media_url && !is_sticker && media_url.length > 34 * 1024 * 1024) {
+    return res.status(400).json({ error: 'Media too large (max 25 MB)' });
+  }
+
+  const ALLOWED = ['image/png','image/jpeg','image/gif','video/mp4'];
+  if (media_type && !ALLOWED.includes(media_type)) {
+    return res.status(400).json({ error: 'Unsupported media type' });
+  }
+
+  const { rows } = await pool.query(
+    `INSERT INTO posts (user_id, content, media_url, media_type, is_sticker)
+     VALUES ($1, $2, $3, $4, $5)
+     RETURNING *`,
+    [req.user.id, (content || '').trim(), media_url || '', media_type || '', !!is_sticker]
+  );
+
+  res.json({ ...rows[0], username: req.user.username });
+  // Award activity point (fire-and-forget)
+  incrementActivity(req.user.id).catch(() => {});
+});
+app.post('/api/posts/:id/like', auth, async (req, res) => {
+  const postId = parseInt(req.params.id);
+  const userId = req.user.id;
+  const { rows } = await pool.query(
+    'SELECT 1 FROM likes WHERE user_id=$1 AND post_id=$2', [userId, postId]
+  );
+  if (rows.length) {
+    await pool.query('DELETE FROM likes WHERE user_id=$1 AND post_id=$2', [userId, postId]);
+  } else {
+    await pool.query('INSERT INTO likes (user_id, post_id) VALUES ($1,$2) ON CONFLICT DO NOTHING', [userId, postId]);
+    // Notify post owner
+    const { rows: postRows } = await pool.query('SELECT user_id FROM posts WHERE id=$1', [postId]);
+    if (postRows[0]) {
+      createNotification(postRows[0].user_id, userId, req.user.username, 'like', postId).catch(() => {});
     }
+  }
+  const { rows: cnt } = await pool.query(
+    'SELECT COUNT(*)::int AS like_count FROM likes WHERE post_id=$1', [postId]
+  );
+  res.json({ liked: !rows.length, like_count: cnt[0].like_count });
+});
+
+// ── COMMENTS ─────────────────────────────────────────────────
+app.get('/api/posts/:id/comments', auth, async (req, res) => {
+  const { rows } = await pool.query(`
+    SELECT c.*, u.username, u.avatar_url, u.accent_color
+    FROM comments c
+    JOIN users u ON u.id = c.user_id
+    WHERE c.post_id = $1
+    ORDER BY c.id ASC
+  `, [parseInt(req.params.id)]);
+  res.json(rows);
+});
+
+app.post('/api/posts/:id/comments', auth, async (req, res) => {
+  const content = (req.body.content || '').trim().slice(0, 500);
+  if (!content) return res.status(400).json({ error: 'Empty comment' });
+  const { rows } = await pool.query(
+    `INSERT INTO comments (post_id, user_id, content)
+     VALUES ($1, $2, $3) RETURNING *`,
+    [parseInt(req.params.id), req.user.id, content]
+  );
+  // Fetch fresh user data from DB so avatar_url is always up to date
+  const { rows: userRows } = await pool.query(
+    'SELECT username, avatar_url, accent_color FROM users WHERE id=$1',
+    [req.user.id]
+  );
+  const u = userRows[0] || {};
+  res.json({ ...rows[0], username: u.username || req.user.username, avatar_url: u.avatar_url || '', accent_color: u.accent_color || '#4da3ff' });
+  // Notify post owner
+  const { rows: postRows } = await pool.query('SELECT user_id FROM posts WHERE id=$1', [parseInt(req.params.id)]);
+  if (postRows[0]) {
+    createNotification(postRows[0].user_id, req.user.id, req.user.username, 'comment', parseInt(req.params.id)).catch(() => {});
+  }
+  // Award activity point (fire-and-forget)
+  incrementActivity(req.user.id).catch(() => {});
+});
+
+app.delete('/api/comments/:id', auth, async (req, res) => {
+  await pool.query(
+    'DELETE FROM comments WHERE id=$1 AND user_id=$2',
+    [parseInt(req.params.id), req.user.id]
+  );
+  res.json({ ok: true });
+});
+
+app.delete('/api/posts/:id', auth, async (req, res) => {
+  await pool.query(
+    'DELETE FROM posts WHERE id=$1 AND user_id=$2',
+    [req.params.id, req.user.id]
+  );
+
+  res.json({ ok: true });
+});
+
+app.get('/api/users/:username', auth, async (req, res) => {
+  const { rows } = await pool.query(
+    `SELECT id, username, bio,
+            banner_url,
+            profile_background,
+            accent_color,
+            profile_theme,
+            profile_widgets,
+            userbars,
+            avatar_url,
+            created_at
+     FROM users
+     WHERE username=$1`,
+    [req.params.username]
+  );
+
+  if (!rows[0]) {
+    return res.status(404).json({ error: 'User not found' });
+  }
+
+  const user = rows[0];
+
+  const [postsR, followersR, followingR, isFollowingR] = await Promise.all([
+    pool.query(`
+      SELECT p.*, COUNT(DISTINCT l.user_id)::int AS like_count,
+             BOOL_OR(l.user_id = $2) AS liked,
+             COUNT(DISTINCT c.id)::int AS comment_count
+      FROM posts p
+      LEFT JOIN likes l ON l.post_id = p.id
+      LEFT JOIN comments c ON c.post_id = p.id
+      WHERE p.user_id = $1
+      GROUP BY p.id
+      ORDER BY p.id DESC
+    `, [user.id, req.user.id]),
+    pool.query('SELECT COUNT(*) FROM follows WHERE following=$1', [user.id]),
+    pool.query('SELECT COUNT(*) FROM follows WHERE follower=$1', [user.id]),
+    pool.query('SELECT 1 FROM follows WHERE follower=$1 AND following=$2', [req.user.id, user.id])
+  ]);
+
+  res.json({
+    ...user,
+    posts: postsR.rows,
+    followers: parseInt(followersR.rows[0].count),
+    following: parseInt(followingR.rows[0].count),
+    isFollowing: isFollowingR.rows.length > 0
+  });
+});
+
+app.post('/api/follow/:id', auth, async (req, res) => {
+  const id = parseInt(req.params.id);
+
+  const { rows } = await pool.query(
+    'SELECT 1 FROM follows WHERE follower=$1 AND following=$2',
+    [req.user.id, id]
+  );
+
+  if (rows.length) {
+    await pool.query(
+      'DELETE FROM follows WHERE follower=$1 AND following=$2',
+      [req.user.id, id]
+    );
+  } else {
+    await pool.query(
+      'INSERT INTO follows (follower, following) VALUES ($1,$2)',
+      [req.user.id, id]
+    );
+    createNotification(id, req.user.id, req.user.username, 'follow', null).catch(() => {});
+  }
+
+  res.json({ ok: true });
+});
+
+app.get('/api/me', auth, async (req, res) => {
+  const { rows } = await pool.query(
+    `SELECT id, username, bio,
+            banner_url,
+            profile_background,
+            accent_color,
+            profile_theme,
+            profile_widgets,
+            userbars,
+            avatar_url,
+            created_at
+     FROM users
+     WHERE id=$1`,
+    [req.user.id]
+  );
+
+  if (!rows[0]) {
+    return res.status(404).json({ error: 'User not found' });
+  }
+
+  res.json(rows[0]);
+});
+
+app.patch('/api/me', auth, async (req, res) => {
+  try {
+    const {
+      bio,
+      banner_url,
+      profile_background,
+      accent_color,
+      profile_theme,
+      profile_widgets,
+      userbars,
+      avatar_url
+    } = req.body || {};
+
+    const safeWidgets = Array.isArray(profile_widgets)
+      ? profile_widgets.slice(0, 12)
+      : [];
+
+    const safeUserbars = Array.isArray(userbars)
+      ? userbars.slice(0, 12)
+      : [];
+
+    await pool.query(
+      `UPDATE users
+       SET bio = $1,
+           banner_url = $2,
+           profile_background = $3,
+           accent_color = $4,
+           profile_theme = $5,
+           profile_widgets = $6::jsonb,
+           userbars = $7::jsonb,
+           avatar_url = $8
+       WHERE id = $9`,
+      [
+        typeof bio === 'string' ? bio.slice(0, 300) : '',
+        typeof banner_url === 'string' ? banner_url.slice(0, 2000) : '',
+        typeof profile_background === 'string' ? profile_background.slice(0, 2000) : '',
+        typeof accent_color === 'string' ? accent_color : '#4da3ff',
+        typeof profile_theme === 'string' ? profile_theme : 'aero',
+        JSON.stringify(safeWidgets),
+        JSON.stringify(safeUserbars),
+        typeof avatar_url === 'string' ? avatar_url.slice(0, 2000) : '',
+        req.user.id
+      ]
+    );
+
+    const { rows } = await pool.query(
+      `SELECT id, username, bio,
+              banner_url,
+              profile_background,
+              accent_color,
+              profile_theme,
+              profile_widgets,
+              userbars,
+              avatar_url,
+              created_at
+       FROM users
+       WHERE id=$1`,
+      [req.user.id]
+    );
+
+    res.json({ ok: true, user: rows[0] });
+  } catch (e) {
+    console.error('PROFILE_UPDATE_ERROR', e);
+    res.status(500).json({ error: 'Failed to update profile' });
+  }
+});
+
+app.get('/api/search', auth, async (req, res) => {
+  const q = `%${(req.query.q || '').toLowerCase()}%`;
+
+  const { rows } = await pool.query(
+    `SELECT id,
+            username,
+            bio,
+            banner_url,
+            accent_color,
+            created_at
+     FROM users
+     WHERE LOWER(username) LIKE $1
+     LIMIT 20`,
+    [q]
+  );
+
+  res.json(rows);
+});
+
+// Helper: create a notification (fire-and-forget safe)
+async function createNotification(toUserId, fromUserId, fromUsername, type, postId = null) {
+  if (toUserId === fromUserId) return; // don't notify yourself
+  try {
+    await pool.query(
+      `INSERT INTO notifications (user_id, from_user_id, from_username, type, post_id)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [toUserId, fromUserId, fromUsername, type, postId]
+    );
   } catch {}
 }
 
-function startTimeoutPoller() {
-  if (_timeoutInterval) clearInterval(_timeoutInterval);
-  // Countdown tick every second
-  _timeoutInterval = setInterval(() => {
-    const cd = document.getElementById('timeout-countdown');
-    if (_timeoutState && cd) {
-      const left = formatTimeLeft(_timeoutState.expiresAt);
-      cd.textContent = left;
-      if (new Date(_timeoutState.expiresAt) <= Date.now()) {
-        pollTimeoutStatus(); // re-check with server
-      }
-    }
-  }, 1000);
-  // Re-sync with server every 15s
-  setInterval(pollTimeoutStatus, 15000);
-}
+// GET /api/notifications — returns notifications for current user
+app.get('/api/notifications', auth, async (req, res) => {
+  const { rows } = await pool.query(
+    `SELECT id, from_username, type, post_id, is_read, created_at
+     FROM notifications
+     WHERE user_id = $1
+     ORDER BY id DESC
+     LIMIT 60`,
+    [req.user.id]
+  );
+  res.json(rows);
+});
 
-async function submitPost() {
-  if (_timeoutState && new Date(_timeoutState.expiresAt) > Date.now()) {
-    renderTimeoutBanner(_timeoutState.expiresAt, _timeoutState.reason);
-    return;
-  }
-  const ta = document.getElementById('ta');
-  if (!ta.value.trim() && !_pendingMedia) return;
-  const btn = document.querySelector('.post-btn');
-  btn.disabled = true; btn.textContent = 'Posting…';
-  const body = { content: ta.value };
-  if (_pendingMedia) {
-    if (_pendingMedia.isSticker) {
-      // Stickers are remote URLs, not base64 — send directly, flag as sticker
-      body.media_url = _pendingMedia.dataUrl;
-      body.media_type = 'image/gif';
-      body.is_sticker = true;
-    } else {
-      body.media_url = _pendingMedia.dataUrl;
-      body.media_type = _pendingMedia.type;
-    }
-  }
-  const post = await api('POST', '/api/posts', body);
-  btn.disabled = false; btn.textContent = 'Post';
-  if (post.error === 'timeout') {
-    _timeoutState = { expiresAt: post.expiresAt, reason: post.reason };
-    renderTimeoutBanner(post.expiresAt, post.reason);
-    return;
-  }
-  if (post.error) return;
-  ta.value = '';
-  clearMedia();
-  document.getElementById('posts').insertAdjacentHTML('afterbegin', renderPost(post));
-  registerActivity();
-}
+// POST /api/notifications/read — mark all notifications as read
+app.post('/api/notifications/read', auth, async (req, res) => {
+  await pool.query(
+    'UPDATE notifications SET is_read = TRUE WHERE user_id = $1',
+    [req.user.id]
+  );
+  res.json({ ok: true });
+});
 
-async function delPost(id) {
-  await api('DELETE', '/api/posts/' + id);
-  document.getElementById('post-' + id)?.remove();
-}
+// GET /api/notifications/unread-count — quick unread badge count
+app.get('/api/notifications/unread-count', auth, async (req, res) => {
+  const { rows } = await pool.query(
+    'SELECT COUNT(*)::int AS count FROM notifications WHERE user_id=$1 AND is_read=FALSE',
+    [req.user.id]
+  );
+  res.json({ count: rows[0]?.count || 0 });
+});
 
-function logout() {
-  stopOnlinePresence();
-  token = null; me = null;
-  localStorage.removeItem('token'); localStorage.removeItem('me');
-  render();
-}
 
-// ── AERO POINTS ───────────────────────────────────────────────
-let _aeroPoints = 0;
 
-async function fetchPoints() {
-  try {
-    const d = await api('GET', '/api/me/points');
-    if (typeof d.aero_points === 'number') {
-      _aeroPoints = d.aero_points;
-      _activityCount = d.activity_count ?? 0;
-      updatePointsDisplay();
-    }
-  } catch {}
-}
-
-function updatePointsDisplay(flash) {
-  const el = document.getElementById('snews-pts-val');
-  if (!el) return;
-  el.textContent = _aeroPoints;
-  if (flash) {
-    el.style.transition = 'transform .15s,opacity .15s';
-    el.style.transform = 'scale(1.35)';
-    el.style.opacity = '0.7';
-    setTimeout(() => { el.style.transform = 'scale(1)'; el.style.opacity = '1'; }, 160);
+// Helper: increment activity count and award points if threshold reached
+async function incrementActivity(userId) {
+  const { rows } = await pool.query(
+    `UPDATE users
+     SET activity_count = activity_count + 1
+     WHERE id = $1
+     RETURNING activity_count, aero_points`,
+    [userId]
+  );
+  if (!rows[0]) return;
+  const { activity_count } = rows[0];
+  // Every 2 activities = 1 point
+  if (activity_count % 2 === 0) {
+    await pool.query(
+      `UPDATE users SET aero_points = aero_points + 1 WHERE id = $1`,
+      [userId]
+    );
   }
 }
 
-// Track activity locally to award points instantly without a round-trip
-let _activityCount = 0;
-function registerActivity() {
-  _activityCount++;
-  if (_activityCount % 2 === 0) {
-    _aeroPoints++;
-    updatePointsDisplay(true);
+// GET /api/me/points — returns current points
+app.get('/api/me/points', auth, async (req, res) => {
+  const { rows } = await pool.query(
+    'SELECT aero_points, activity_count FROM users WHERE id=$1',
+    [req.user.id]
+  );
+  res.json(rows[0] || { aero_points: 0, activity_count: 0 });
+});
+
+// GET /api/news — returns latest news items
+app.get('/api/news', auth, async (req, res) => {
+  const { rows } = await pool.query(
+    `SELECT id, username, content, created_at FROM news ORDER BY id DESC LIMIT 50`
+  );
+  res.json(rows);
+});
+
+// POST /api/news — spend 10 points to post a news message
+app.post('/api/news', auth, async (req, res) => {
+  const content = (req.body.content || '').trim().slice(0, 456);
+  if (!content) return res.status(400).json({ error: 'News content is empty' });
+
+  // Check points
+  const { rows: userRows } = await pool.query(
+    'SELECT aero_points, username FROM users WHERE id=$1',
+    [req.user.id]
+  );
+  const user = userRows[0];
+  if (!user || user.aero_points < 10) {
+    return res.status(403).json({ error: 'Not enough Aero-Points (need 10)' });
   }
-}
 
-// kept for any legacy call — now a no-op div
-function renderAeroPointsBar() { return ''; }
-
-// ── NEWS SIDEBAR ──────────────────────────────────────────────
-let _newsItems = [];
-let _newsIndex = 0;
-let _newsRotateInterval = null;
-
-function stopNewsRotation() {
-  if (_newsRotateInterval) { clearInterval(_newsRotateInterval); _newsRotateInterval = null; }
-}
-
-function startNewsRotation() {
-  stopNewsRotation();
-  if (_newsItems.length <= 1) return;
-  _newsRotateInterval = setInterval(() => {
-    _newsIndex = (_newsIndex + 1) % _newsItems.length;
-    renderSidebarNewsItem();
-  }, 25000);
-}
-
-function renderSidebarNewsItem() {
-  const body = document.getElementById('snews-body');
-  if (!body) return;
-  const item = _newsItems[_newsIndex];
-  if (!item) return;
-  const dotsHtml = _newsItems.length > 1
-    ? `<div class="snews-dots">${_newsItems.map((_, i) =>
-        `<div class="snews-dot ${i === _newsIndex ? 'active' : ''}" onclick="jumpNewsItem(${i})"></div>`
-      ).join('')}</div>`
-    : '';
-  body.innerHTML = `<div class="snews-item">
-    <div class="snews-item-user" onclick="goto('profile','${escHtml(item.username)}')" title="${escHtml(item.username)}">${escHtml(item.username)}</div>
-    <div class="snews-item-text">${escHtml(item.content)}</div>
-    <div class="snews-item-time">${timeAgo(item.created_at)}</div>
-    ${dotsHtml}
-  </div>`;
-}
-
-function jumpNewsItem(i) {
-  _newsIndex = i;
-  renderSidebarNewsItem();
-  startNewsRotation();
-}
-
-async function loadNewsSidebar() {
-  const sidebar = document.getElementById('news-sidebar');
-  if (!sidebar) return;
-
-  const news = await api('GET', '/api/news');
-  if (Array.isArray(news)) _newsItems = news;
-  _newsIndex = 0;
-
-  const hint = _aeroPoints >= 10 ? '✨ Ready to send News!' : `${10 - _aeroPoints} more to send News`;
-
-  sidebar.innerHTML = `
-    <div class="online-panel" id="online-panel">
-      <div class="online-header">
-        <span style="font-size:11px">🟢</span>
-        <span class="online-title">Online</span>
-        <span class="online-count" id="online-count">…</span>
-      </div>
-      <div class="online-body" id="online-body"><div class="online-empty">Loading…</div></div>
-    </div>
-
-    <div class="snews-points">
-      <div class="snews-points-label">⭐ Aero-Points</div>
-      <div class="snews-points-val" id="snews-pts-val">${_aeroPoints}</div>
-    </div>
-
-    <div class="snews-wrap">
-      <div class="snews-header">
-        <span style="font-size:13px">📰</span>
-        <span class="snews-title">News</span>
-        <span class="snews-count">${_newsItems.length}</span>
-      </div>
-      <div class="snews-body" id="snews-body">
-        ${_newsItems.length === 0 ? `<div class="snews-empty">No news yet</div>` : ''}
-      </div>
-    </div>
-
-    <div class="snews-compose">
-      <div class="snews-compose-label">
-        Send News <span class="snews-compose-cost">⭐10</span>
-      </div>
-      <textarea id="snews-ta" placeholder="Write news… (max 456 chars)" maxlength="456"
-        oninput="updateSnewsChar()"></textarea>
-      <div class="snews-compose-footer">
-        <span class="snews-char" id="snews-char">0 / 456</span>
-        <button class="snews-send-btn" onclick="submitSidebarNews()">Send</button>
-      </div>
-      <div class="snews-err" id="snews-err"></div>
-    </div>`;
-
-  if (_newsItems.length > 0) {
-    renderSidebarNewsItem();
-    startNewsRotation();
-  }
-}
-
-function updateSnewsChar() {
-  const ta = document.getElementById('snews-ta');
-  const el = document.getElementById('snews-char');
-  if (!ta || !el) return;
-  const len = ta.value.length;
-  el.textContent = `${len} / 456`;
-  el.classList.toggle('warn', len > 400);
-}
-
-async function submitSidebarNews() {
-  const ta = document.getElementById('snews-ta');
-  const err = document.getElementById('snews-err');
-  if (!ta) return;
-  const text = ta.value.trim();
-  if (!text) { err.textContent = 'Write something first.'; return; }
-  if (_aeroPoints < 10) { err.textContent = `Need ${10 - _aeroPoints} more points.`; return; }
-  err.textContent = '';
-  const btn = document.querySelector('.snews-send-btn');
-  if (btn) { btn.disabled = true; btn.textContent = '…'; }
-  const d = await api('POST', '/api/news', { content: text });
-  if (btn) { btn.disabled = false; btn.textContent = 'Send'; }
-  if (d.error) { err.textContent = d.error; return; }
-  ta.value = '';
-  updateSnewsChar();
-  _aeroPoints -= 10;
-  loadNewsSidebar();
-}
+  // Deduct points and insert news
+  await pool.query(
+    'UPDATE users SET aero_points = aero_points - 10 WHERE id=$1',
+    [req.user.id]
+  );
+  const { rows } = await pool.query(
+    `INSERT INTO news (user_id, username, content) VALUES ($1, $2, $3) RETURNING *`,
+    [req.user.id, user.username, content]
+  );
+  res.json(rows[0]);
+});
 
 // ── ONLINE PRESENCE ──────────────────────────────────────────
-let _onlinePingInterval = null;
-let _onlinePollInterval = null;
+// In-memory store: userId -> { username, lastSeen }
+const onlineMap = new Map();
+const ONLINE_TIMEOUT_MS = 45 * 1000; // 45 seconds
 
-function startOnlinePresence() {
-  // Ping immediately, then every 30s
-  api('POST', '/api/online/ping').catch(() => {});
-  if (_onlinePingInterval) clearInterval(_onlinePingInterval);
-  _onlinePingInterval = setInterval(() => {
-    api('POST', '/api/online/ping').catch(() => {});
-  }, 30000);
+// POST /api/online/ping — called by clients every 30s
+app.post('/api/online/ping', auth, async (req, res) => {
+  onlineMap.set(req.user.id, { username: req.user.username, lastSeen: Date.now() });
+  res.json({ ok: true });
+});
 
-  // Poll online users every 15s
-  fetchOnlineUsers();
-  if (_onlinePollInterval) clearInterval(_onlinePollInterval);
-  _onlinePollInterval = setInterval(fetchOnlineUsers, 15000);
+// DELETE /api/online/ping — called on logout/unload
+app.delete('/api/online/ping', auth, async (req, res) => {
+  onlineMap.delete(req.user.id);
+  res.json({ ok: true });
+});
 
-  // Remove from online on page close
-  window.addEventListener('beforeunload', () => {
-    navigator.sendBeacon && navigator.sendBeacon('/api/online/ping', null);
-    api('DELETE', '/api/online/ping').catch(() => {});
-  });
-}
-
-function stopOnlinePresence() {
-  if (_onlinePingInterval) { clearInterval(_onlinePingInterval); _onlinePingInterval = null; }
-  if (_onlinePollInterval) { clearInterval(_onlinePollInterval); _onlinePollInterval = null; }
-  if (token) api('DELETE', '/api/online/ping').catch(() => {});
-}
-
-async function fetchOnlineUsers() {
-  try {
-    const users = await api('GET', '/api/online/users');
-    renderOnlinePanel(Array.isArray(users) ? users : []);
-  } catch {}
-}
-
-function renderOnlinePanel(users) {
-  const body = document.getElementById('online-body');
-  const countEl = document.getElementById('online-count');
-  if (!body) return;
-  if (countEl) countEl.textContent = users.length;
-  if (!users.length) {
-    body.innerHTML = `<div class="online-empty">No one online</div>`;
-    return;
+// GET /api/online/users — returns list of recently-seen users
+app.get('/api/online/users', auth, async (req, res) => {
+  const now = Date.now();
+  const users = [];
+  for (const [id, data] of onlineMap) {
+    if (now - data.lastSeen < ONLINE_TIMEOUT_MS) {
+      users.push({ id, username: data.username, isMe: id === req.user.id });
+    } else {
+      onlineMap.delete(id);
+    }
   }
-  body.innerHTML = users.map(u =>
-    `<div class="online-user" onclick="goto('profile','${escHtml(u.username)}')">
-      <div class="online-dot${u.isMe ? ' me' : ''}"></div>
-      <span class="online-name${u.isMe ? ' me' : ''}">${escHtml(u.username)}${u.isMe ? ' (you)' : ''}</span>
-    </div>`
-  ).join('');
-}
+  users.sort((a, b) => a.username.localeCompare(b.username));
+  res.json(users);
+});
 
-verifyToken().then(render);
-</script>
-
-</body>
-</html>
+app.listen(process.env.PORT || 8080, () => {
+  console.log('Listening on', process.env.PORT || 8080);
+  console.log('DB host:', connStr.replace(/\/\/.*@/, '//***@'));
+});
