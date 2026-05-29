@@ -646,6 +646,38 @@ app.post('/api/news', auth, async (req, res) => {
   res.json(rows[0]);
 });
 
+// ── ONLINE PRESENCE ──────────────────────────────────────────
+// In-memory store: userId -> { username, lastSeen }
+const onlineMap = new Map();
+const ONLINE_TIMEOUT_MS = 45 * 1000; // 45 seconds
+
+// POST /api/online/ping — called by clients every 30s
+app.post('/api/online/ping', auth, async (req, res) => {
+  onlineMap.set(req.user.id, { username: req.user.username, lastSeen: Date.now() });
+  res.json({ ok: true });
+});
+
+// DELETE /api/online/ping — called on logout/unload
+app.delete('/api/online/ping', auth, async (req, res) => {
+  onlineMap.delete(req.user.id);
+  res.json({ ok: true });
+});
+
+// GET /api/online/users — returns list of recently-seen users
+app.get('/api/online/users', auth, async (req, res) => {
+  const now = Date.now();
+  const users = [];
+  for (const [id, data] of onlineMap) {
+    if (now - data.lastSeen < ONLINE_TIMEOUT_MS) {
+      users.push({ id, username: data.username, isMe: id === req.user.id });
+    } else {
+      onlineMap.delete(id);
+    }
+  }
+  users.sort((a, b) => a.username.localeCompare(b.username));
+  res.json(users);
+});
+
 app.listen(process.env.PORT || 8080, () => {
   console.log('Listening on', process.env.PORT || 8080);
   console.log('DB host:', connStr.replace(/\/\/.*@/, '//***@'));
