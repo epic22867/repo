@@ -120,6 +120,7 @@ const safeAlterQueries = [
   `ALTER TABLE posts ADD COLUMN IF NOT EXISTS is_sticker BOOLEAN DEFAULT FALSE`,
   `ALTER TABLE users ADD COLUMN IF NOT EXISTS aero_points INTEGER DEFAULT 0`,
   `ALTER TABLE users ADD COLUMN IF NOT EXISTS activity_count INTEGER DEFAULT 0`,
+  `ALTER TABLE users ADD COLUMN IF NOT EXISTS pinned_post_id INTEGER REFERENCES posts(id) ON DELETE SET NULL`,
 ];
 
 for (const q of safeAlterQueries) {
@@ -340,7 +341,19 @@ app.post('/api/posts', auth, async (req, res) => {
     [req.user.id, (content || '').trim(), media_url || '', media_type || '', !!is_sticker]
   );
 
-  res.json({ ...rows[0], username: req.user.username });
+  // Fetch fresh user data so accent_color and avatar_url are always current
+  const { rows: userRows } = await pool.query(
+    'SELECT username, avatar_url, accent_color FROM users WHERE id=$1',
+    [req.user.id]
+  );
+  const u = userRows[0] || {};
+
+  res.json({
+    ...rows[0],
+    username:     u.username     || req.user.username,
+    avatar_url:   u.avatar_url   || '',
+    accent_color: u.accent_color || '#4da3ff',
+  });
   // Award activity point (fire-and-forget)
   incrementActivity(req.user.id).catch(() => {});
 });
@@ -429,7 +442,8 @@ app.get('/api/users/:username', auth, async (req, res) => {
             profile_widgets,
             userbars,
             avatar_url,
-            created_at
+            created_at,
+            pinned_post_id
      FROM users
      WHERE username=$1`,
     [req.params.username]
@@ -451,8 +465,10 @@ app.get('/api/users/:username', auth, async (req, res) => {
       LEFT JOIN comments c ON c.post_id = p.id
       WHERE p.user_id = $1
       GROUP BY p.id
-      ORDER BY p.id DESC
-    `, [user.id, req.user.id]),
+      ORDER BY
+        CASE WHEN p.id = $3 THEN 0 ELSE 1 END,
+        p.id DESC
+    `, [user.id, req.user.id, user.pinned_post_id || 0]),
     pool.query('SELECT COUNT(*) FROM follows WHERE following=$1', [user.id]),
     pool.query('SELECT COUNT(*) FROM follows WHERE follower=$1', [user.id]),
     pool.query('SELECT 1 FROM follows WHERE follower=$1 AND following=$2', [req.user.id, user.id])
@@ -463,7 +479,8 @@ app.get('/api/users/:username', auth, async (req, res) => {
     posts: postsR.rows,
     followers: parseInt(followersR.rows[0].count),
     following: parseInt(followingR.rows[0].count),
-    isFollowing: isFollowingR.rows.length > 0
+    isFollowing: isFollowingR.rows.length > 0,
+    pinned_post_id: user.pinned_post_id || null
   });
 });
 
@@ -724,6 +741,25 @@ app.post('/api/online/ping', auth, async (req, res) => {
 app.delete('/api/online/ping', auth, async (req, res) => {
   onlineMap.delete(req.user.id);
   res.json({ ok: true });
+});
+
+// POST /api/me/pin/:postId — pin a post to your profile (must own the post)
+app.post('/api/me/pin/:postId', auth, async (req, res) => {
+  const postId = parseInt(req.params.postId);
+  // Verify the post belongs to the requesting user
+  const { rows } = await pool.query(
+    'SELECT id FROM posts WHERE id=$1 AND user_id=$2',
+    [postId, req.user.id]
+  );
+  if (!rows[0]) return res.status(403).json({ error: 'Post not found or not yours' });
+  await pool.query('UPDATE users SET pinned_post_id=$1 WHERE id=$2', [postId, req.user.id]);
+  res.json({ ok: true, pinned_post_id: postId });
+});
+
+// DELETE /api/me/pin — unpin the currently pinned post
+app.delete('/api/me/pin', auth, async (req, res) => {
+  await pool.query('UPDATE users SET pinned_post_id=NULL WHERE id=$1', [req.user.id]);
+  res.json({ ok: true, pinned_post_id: null });
 });
 
 // GET /api/online/users — returns list of recently-seen users
