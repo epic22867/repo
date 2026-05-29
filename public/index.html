@@ -305,6 +305,14 @@
       font-weight:700;
     }
     .username-omlette:hover{filter:drop-shadow(0 0 6px rgba(220,60,60,0.55));}
+    /* Yigorish special gradient nick */
+    .username-yigorish{
+      background:linear-gradient(90deg,#2ec4a0 0%,#3ddbb4 35%,#a8f0e0 70%,#ffffff 100%);
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+      filter:drop-shadow(0 0 4px rgba(46,196,160,0.4));
+      font-weight:700;
+    }
+    .username-yigorish:hover{filter:drop-shadow(0 0 6px rgba(60,220,180,0.6));}
     .post-time{font-size:10.5px;color:var(--text-light)}
     .post-content{line-height:1.65;color:var(--text-dark);white-space:pre-wrap;word-break:break-word}
     .post-del{float:right;background:none;border:none;cursor:pointer;color:#aac8e0;font-size:17px;line-height:1;margin-left:8px;transition:color .15s}
@@ -914,6 +922,7 @@ function usernameHtml(u) {
   if (u === 'ось') return `<span class="username-os">${escaped}</span>`;
   if (u === 'Florence') return `<span class="username-florence">${escaped}</span>`;
   if (u === 'Omlette') return `<span class="username-omlette">${escaped}</span>`;
+  if (u === 'Yigorish') return `<span class="username-yigorish">${escaped}</span>`;
   return escaped;
 }
 
