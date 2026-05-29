@@ -41,21 +41,22 @@
       border-bottom:1px solid rgba(255,255,255,0.6);
       box-shadow:0 2px 16px rgba(50,120,200,0.3),inset 0 1px 0 rgba(255,255,255,0.95);
       backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
-      display:flex;align-items:center;justify-content:space-between;padding:0 18px;
+      display:flex;align-items:center;padding:0 10px 0 14px;gap:6px;overflow:hidden;
     }
     .logo{
       font-size:18px;font-weight:700;letter-spacing:.05em;
       background:linear-gradient(180deg,#fff 0%,#b0d8f8 50%,#5a9fd4 100%);
       -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
       text-shadow:none;filter:drop-shadow(0 1px 2px rgba(30,80,160,0.4));
-      display:flex;align-items:center;
+      display:flex;align-items:center;flex-shrink:0;
     }
-    .nav-links{display:flex;gap:4px}
+    .nav-links{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;flex:1;min-width:0}
+    .nav-links::-webkit-scrollbar{display:none}
     .nav-links button{
       background:linear-gradient(180deg,rgba(255,255,255,0.7) 0%,rgba(190,225,255,0.5) 100%);
       border:1px solid rgba(255,255,255,0.8);border-bottom-color:rgba(140,190,240,0.5);
       border-radius:14px;cursor:pointer;color:var(--text-dark);font-family:inherit;
-      font-size:11.5px;font-weight:600;padding:4px 12px;
+      font-size:11.5px;font-weight:600;padding:4px 10px;white-space:nowrap;flex-shrink:0;
       box-shadow:0 1px 4px rgba(80,140,200,0.15),inset 0 1px 0 rgba(255,255,255,0.9);
       transition:all .15s;letter-spacing:.02em;
     }
@@ -155,12 +156,12 @@
       color:var(--text-dark);background:transparent;outline:none;min-height:52px;
     }
     textarea::placeholder{color:#9ab8d0}
-    .compose-footer{display:flex;justify-content:space-between;align-items:center;margin-top:8px;gap:8px}
+    .compose-footer{display:flex;justify-content:space-between;align-items:center;margin-top:8px;gap:6px;min-width:0}
     .media-btn{
-      display:flex;align-items:center;gap:5px;padding:5px 12px;font-family:inherit;font-size:11.5px;
-      font-weight:600;cursor:pointer;border-radius:14px;color:#5a9fd4;
+      display:flex;align-items:center;gap:4px;padding:5px 9px;font-family:inherit;font-size:11px;
+      font-weight:600;cursor:pointer;border-radius:14px;color:#5a9fd4;white-space:nowrap;flex-shrink:0;
       background:rgba(100,175,245,0.12);border:1px solid rgba(100,175,245,0.35);
-      transition:all .15s;white-space:nowrap;
+      transition:all .15s;
     }
     .media-btn:hover{background:rgba(100,175,245,0.22)}
     #media-preview-wrap{margin-top:10px;position:relative;display:inline-block;max-width:100%}
@@ -173,10 +174,10 @@
 
     /* EMOJI & STICKER PICKER */
     .picker-btn{
-      display:flex;align-items:center;gap:5px;padding:5px 10px;font-family:inherit;font-size:11.5px;
-      font-weight:600;cursor:pointer;border-radius:14px;color:#5a9fd4;
+      display:flex;align-items:center;gap:4px;padding:5px 9px;font-family:inherit;font-size:11px;
+      font-weight:600;cursor:pointer;border-radius:14px;color:#5a9fd4;white-space:nowrap;flex-shrink:0;
       background:rgba(100,175,245,0.12);border:1px solid rgba(100,175,245,0.35);
-      transition:all .15s;white-space:nowrap;flex-shrink:0;
+      transition:all .15s;
     }
     .picker-btn:hover{background:rgba(100,175,245,0.22)}
     .picker-btn.active{background:rgba(100,175,245,0.28);border-color:rgba(60,140,220,0.55)}
@@ -241,13 +242,14 @@
     .post-emoji{height:20px;width:20px;object-fit:contain;vertical-align:middle;display:inline-block;margin:0 1px}
     /* sticker in posts */
     .post-sticker{max-width:140px;max-height:140px;display:block;margin-top:6px;border-radius:10px}
-    .compose-footer-left{display:flex;gap:6px;align-items:center}
+    .compose-footer-left{display:flex;gap:5px;align-items:center;overflow-x:auto;flex:1;min-width:0;scrollbar-width:none}
+    .compose-footer-left::-webkit-scrollbar{display:none}
     .post-btn{
-      padding:6px 20px;font-family:inherit;font-size:11.5px;font-weight:600;cursor:pointer;border-radius:14px;
+      padding:6px 18px;font-family:inherit;font-size:11.5px;font-weight:600;cursor:pointer;border-radius:14px;flex-shrink:0;
       background:linear-gradient(180deg,rgba(100,175,245,0.95) 0%,rgba(60,140,225,0.9) 49%,rgba(40,120,210,0.95) 50%,rgba(80,160,240,0.9) 100%);
       color:#fff;border:1px solid rgba(30,100,200,0.5);letter-spacing:.04em;
       box-shadow:0 2px 8px rgba(30,100,200,0.3),inset 0 1px 0 rgba(255,255,255,0.4);
-      transition:all .15s;
+      transition:all .15s;white-space:nowrap;
     }
     .post-btn:hover{box-shadow:0 3px 12px rgba(30,100,200,0.4),inset 0 1px 0 rgba(255,255,255,0.5)}
 
