@@ -126,6 +126,13 @@
     .btn-ghost{background:linear-gradient(180deg,rgba(255,255,255,0.5) 0%,rgba(220,235,250,0.35) 100%);color:var(--text-mid);border-color:rgba(150,195,235,0.5)}
     .err{color:#c0392b;font-size:11px;max-width:260px;text-align:center;background:rgba(255,220,220,0.5);border-radius:4px;padding:4px 8px}
 
+    /* CLICKABLE NOTIFICATION ITEMS */
+    .notif-item-clickable{cursor:pointer;transition:background .15s,box-shadow .15s}
+    .notif-item-clickable:hover{
+      background:linear-gradient(180deg,rgba(255,255,255,0.7) 0%,rgba(220,238,255,0.55) 100%);
+      box-shadow:0 2px 10px rgba(60,130,210,0.13);
+    }
+
     /* TIMEOUT BANNER */
     .timeout-banner{
       margin:10px 12px 0;border-radius:10px;
@@ -1040,6 +1047,31 @@ function goto(v, user) {
   view = v;
   if (user) profileUser = user;
   render();
+}
+
+// Navigate to a specific post on a user's profile and highlight it
+async function gotoPost(username, postId) {
+  goto('profile', username);
+  // Poll until the post element appears in the DOM (profile loads async)
+  const maxWait = 5000;
+  const interval = 100;
+  let elapsed = 0;
+  const tryScroll = setInterval(() => {
+    const el = document.getElementById(`post-${postId}`);
+    if (el) {
+      clearInterval(tryScroll);
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.style.transition = 'box-shadow 0.3s ease, outline 0.3s ease';
+      el.style.outline = '2px solid rgba(60,140,225,0.7)';
+      el.style.boxShadow = '0 0 0 4px rgba(60,140,225,0.18), 0 4px 20px rgba(60,140,225,0.25)';
+      setTimeout(() => {
+        el.style.outline = '';
+        el.style.boxShadow = '';
+      }, 2200);
+    }
+    elapsed += interval;
+    if (elapsed >= maxWait) clearInterval(tryScroll);
+  }, interval);
 }
 
 async function loadFeed() {
@@ -2075,10 +2107,21 @@ async function loadNotifications() {
 
   const icons = { like: '❤️', comment: '💬', follow: '👤' };
   const msgs = {
-    like: (n) => `<strong onclick="goto('profile','${escHtml(n.from_username)}')">${escHtml(n.from_username)}</strong> liked your post`,
-    comment: (n) => `<strong onclick="goto('profile','${escHtml(n.from_username)}')">${escHtml(n.from_username)}</strong> commented on your post`,
-    follow: (n) => `<strong onclick="goto('profile','${escHtml(n.from_username)}')">${escHtml(n.from_username)}</strong> started following you`,
+    like: (n) => `<strong>${escHtml(n.from_username)}</strong> liked your post`,
+    comment: (n) => `<strong>${escHtml(n.from_username)}</strong> commented on your post`,
+    follow: (n) => `<strong onclick="event.stopPropagation();goto('profile','${escHtml(n.from_username)}')">${escHtml(n.from_username)}</strong> started following you`,
   };
+
+  // Build onclick for each notification: like/comment go to the post, follow goes to profile
+  function notifOnclick(n) {
+    if ((n.type === 'like' || n.type === 'comment') && n.post_id) {
+      return `onclick="gotoPost('${escHtml(n.from_username)}',${n.post_id})"`;
+    }
+    if (n.type === 'follow') {
+      return `onclick="goto('profile','${escHtml(n.from_username)}')"`;
+    }
+    return '';
+  }
 
   content.innerHTML = `
     <div class="notif-header">
@@ -2086,7 +2129,7 @@ async function loadNotifications() {
     </div>
     <div class="notif-list">
       ${notifs.map(n => `
-        <div class="notif-item${n.is_read ? '' : ' unread'}">
+        <div class="notif-item${n.is_read ? '' : ' unread'}${(n.type === 'like' || n.type === 'comment') && n.post_id ? ' notif-item-clickable' : ''}" ${notifOnclick(n)}>
           <div class="notif-icon">${icons[n.type] || '🔔'}</div>
           <div class="notif-body">
             <div class="notif-text">${(msgs[n.type] || (() => escHtml(n.type)))(n)}</div>
@@ -2136,7 +2179,14 @@ function showNotifToast(notif) {
     e.stopPropagation();
     dismissToast(toast);
   };
-  toast.onclick = () => { goto('notifications'); dismissToast(toast); };
+  toast.onclick = () => {
+    dismissToast(toast);
+    if ((notif.type === 'like' || notif.type === 'comment') && notif.post_id) {
+      gotoPost(notif.from_username, notif.post_id);
+    } else {
+      goto('notifications');
+    }
+  };
 
   container.appendChild(toast);
 
