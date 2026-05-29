@@ -1049,29 +1049,13 @@ function goto(v, user) {
   render();
 }
 
+// Pending post highlight: set before calling goto so loadProfile can pick it up
+let _pendingScrollPostId = null;
+
 // Navigate to a specific post on a user's profile and highlight it
-async function gotoPost(username, postId) {
+function gotoPost(username, postId) {
+  _pendingScrollPostId = postId;
   goto('profile', username);
-  // Poll until the post element appears in the DOM (profile loads async)
-  const maxWait = 5000;
-  const interval = 100;
-  let elapsed = 0;
-  const tryScroll = setInterval(() => {
-    const el = document.getElementById(`post-${postId}`);
-    if (el) {
-      clearInterval(tryScroll);
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      el.style.transition = 'box-shadow 0.3s ease, outline 0.3s ease';
-      el.style.outline = '2px solid rgba(60,140,225,0.7)';
-      el.style.boxShadow = '0 0 0 4px rgba(60,140,225,0.18), 0 4px 20px rgba(60,140,225,0.25)';
-      setTimeout(() => {
-        el.style.outline = '';
-        el.style.boxShadow = '';
-      }, 2200);
-    }
-    elapsed += interval;
-    if (elapsed >= maxWait) clearInterval(tryScroll);
-  }, interval);
 }
 
 async function loadFeed() {
@@ -1212,6 +1196,20 @@ async function loadProfile(username) {
     </div>`;
   applyProfileMedia(content);
   applyWidgetImages(content);
+
+  // If we arrived here via gotoPost(), scroll to and highlight the target post
+  if (_pendingScrollPostId !== null) {
+    const targetId = _pendingScrollPostId;
+    _pendingScrollPostId = null;
+    const el = document.getElementById(`post-${targetId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.style.transition = 'box-shadow 0.4s ease, outline 0.4s ease';
+      el.style.outline = '2px solid rgba(60,140,225,0.75)';
+      el.style.boxShadow = '0 0 0 4px rgba(60,140,225,0.18), 0 6px 24px rgba(60,140,225,0.3)';
+      setTimeout(() => { el.style.outline = ''; el.style.boxShadow = ''; }, 2400);
+    }
+  }
 }
 
 function renderSettings() {
@@ -2115,7 +2113,8 @@ async function loadNotifications() {
   // Build onclick for each notification: like/comment go to the post, follow goes to profile
   function notifOnclick(n) {
     if ((n.type === 'like' || n.type === 'comment') && n.post_id) {
-      return `onclick="gotoPost('${escHtml(n.from_username)}',${n.post_id})"`;
+      // The post belongs to *me* — navigate to my own profile and scroll to the post
+      return `onclick="gotoPost('${escHtml(me.username)}',${n.post_id})"`;
     }
     if (n.type === 'follow') {
       return `onclick="goto('profile','${escHtml(n.from_username)}')"`;
@@ -2182,7 +2181,7 @@ function showNotifToast(notif) {
   toast.onclick = () => {
     dismissToast(toast);
     if ((notif.type === 'like' || notif.type === 'comment') && notif.post_id) {
-      gotoPost(notif.from_username, notif.post_id);
+      gotoPost(me.username, notif.post_id);
     } else {
       goto('notifications');
     }
