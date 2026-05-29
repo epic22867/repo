@@ -88,6 +88,17 @@ await pool.query(`
     content TEXT NOT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW()
   );
+
+  CREATE TABLE IF NOT EXISTS notifications (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    from_user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    from_username TEXT NOT NULL,
+    type TEXT NOT NULL,
+    post_id INTEGER REFERENCES posts(id) ON DELETE CASCADE,
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  );
 `);
 
 // In-memory rate limit tracker: userId -> array of post timestamps (ms)
@@ -197,8 +208,6 @@ app.get('/api/feed', auth, async (req, res) => {
     JOIN users u ON u.id = p.user_id
     LEFT JOIN likes l ON l.post_id = p.id
     LEFT JOIN comments c ON c.post_id = p.id
-    WHERE p.user_id = $1
-       OR p.user_id IN (SELECT following FROM follows WHERE follower = $1)
     GROUP BY p.id, u.username, u.accent_color, u.banner_url
     ORDER BY p.id DESC
     LIMIT 100
@@ -345,6 +354,11 @@ app.post('/api/posts/:id/like', auth, async (req, res) => {
     await pool.query('DELETE FROM likes WHERE user_id=$1 AND post_id=$2', [userId, postId]);
   } else {
     await pool.query('INSERT INTO likes (user_id, post_id) VALUES ($1,$2) ON CONFLICT DO NOTHING', [userId, postId]);
+    // Notify post owner
+    const { rows: postRows } = await pool.query('SELECT user_id FROM posts WHERE id=$1', [postId]);
+    if (postRows[0]) {
+      createNotification(postRows[0].user_id, userId, req.user.username, 'like', postId).catch(() => {});
+    }
   }
   const { rows: cnt } = await pool.query(
     'SELECT COUNT(*)::int AS like_count FROM likes WHERE post_id=$1', [postId]
@@ -379,6 +393,11 @@ app.post('/api/posts/:id/comments', auth, async (req, res) => {
   );
   const u = userRows[0] || {};
   res.json({ ...rows[0], username: u.username || req.user.username, avatar_url: u.avatar_url || '', accent_color: u.accent_color || '#4da3ff' });
+  // Notify post owner
+  const { rows: postRows } = await pool.query('SELECT user_id FROM posts WHERE id=$1', [parseInt(req.params.id)]);
+  if (postRows[0]) {
+    createNotification(postRows[0].user_id, req.user.id, req.user.username, 'comment', parseInt(req.params.id)).catch(() => {});
+  }
   // Award activity point (fire-and-forget)
   incrementActivity(req.user.id).catch(() => {});
 });
@@ -466,6 +485,7 @@ app.post('/api/follow/:id', auth, async (req, res) => {
       'INSERT INTO follows (follower, following) VALUES ($1,$2)',
       [req.user.id, id]
     );
+    createNotification(id, req.user.id, req.user.username, 'follow', null).catch(() => {});
   }
 
   res.json({ ok: true });
@@ -580,7 +600,50 @@ app.get('/api/search', auth, async (req, res) => {
   res.json(rows);
 });
 
-// ── AERO POINTS & NEWS ──────────────────────────────────────
+// Helper: create a notification (fire-and-forget safe)
+async function createNotification(toUserId, fromUserId, fromUsername, type, postId = null) {
+  if (toUserId === fromUserId) return; // don't notify yourself
+  try {
+    await pool.query(
+      `INSERT INTO notifications (user_id, from_user_id, from_username, type, post_id)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [toUserId, fromUserId, fromUsername, type, postId]
+    );
+  } catch {}
+}
+
+// GET /api/notifications — returns notifications for current user
+app.get('/api/notifications', auth, async (req, res) => {
+  const { rows } = await pool.query(
+    `SELECT id, from_username, type, post_id, is_read, created_at
+     FROM notifications
+     WHERE user_id = $1
+     ORDER BY id DESC
+     LIMIT 60`,
+    [req.user.id]
+  );
+  res.json(rows);
+});
+
+// POST /api/notifications/read — mark all notifications as read
+app.post('/api/notifications/read', auth, async (req, res) => {
+  await pool.query(
+    'UPDATE notifications SET is_read = TRUE WHERE user_id = $1',
+    [req.user.id]
+  );
+  res.json({ ok: true });
+});
+
+// GET /api/notifications/unread-count — quick unread badge count
+app.get('/api/notifications/unread-count', auth, async (req, res) => {
+  const { rows } = await pool.query(
+    'SELECT COUNT(*)::int AS count FROM notifications WHERE user_id=$1 AND is_read=FALSE',
+    [req.user.id]
+  );
+  res.json({ count: rows[0]?.count || 0 });
+});
+
+
 
 // Helper: increment activity count and award points if threshold reached
 async function incrementActivity(userId) {
