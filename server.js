@@ -362,7 +362,13 @@ app.post('/api/posts/:id/comments', auth, async (req, res) => {
      VALUES ($1, $2, $3) RETURNING *`,
     [parseInt(req.params.id), req.user.id, content]
   );
-  res.json({ ...rows[0], username: req.user.username, avatar_url: req.user.avatar_url || '', accent_color: req.user.accent_color || '#4da3ff' });
+  // Fetch fresh user data from DB so avatar_url is always up to date
+  const { rows: userRows } = await pool.query(
+    'SELECT username, avatar_url, accent_color FROM users WHERE id=$1',
+    [req.user.id]
+  );
+  const u = userRows[0] || {};
+  res.json({ ...rows[0], username: u.username || req.user.username, avatar_url: u.avatar_url || '', accent_color: u.accent_color || '#4da3ff' });
 });
 
 app.delete('/api/comments/:id', auth, async (req, res) => {
