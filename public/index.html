@@ -572,6 +572,88 @@ div.profile-userbar{cursor:default}
       pointer-events:none;z-index:0;
     }
     #app{position:relative;z-index:1}
+
+    /* AERO POINTS BADGE */
+    .aero-points-bar{
+      margin:12px 12px 0;border-radius:10px;
+      background:linear-gradient(180deg,rgba(255,255,255,0.55) 0%,rgba(200,235,255,0.4) 100%);
+      border:1px solid rgba(255,255,255,0.85);border-bottom-color:rgba(140,195,240,0.4);
+      box-shadow:0 2px 10px rgba(80,150,220,0.1),inset 0 1px 0 rgba(255,255,255,0.95);
+      padding:12px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+    }
+    .aero-points-icon{font-size:22px;filter:drop-shadow(0 1px 3px rgba(30,80,160,0.3))}
+    .aero-points-info{flex:1;min-width:0}
+    .aero-points-label{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-light);font-weight:700;margin-bottom:2px}
+    .aero-points-val{
+      font-size:20px;font-weight:700;
+      background:linear-gradient(180deg,#4da8ff 0%,#1e6bbf 100%);
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+      filter:drop-shadow(0 1px 2px rgba(30,80,160,0.2));
+    }
+    .aero-points-hint{font-size:10.5px;color:var(--text-light);margin-top:1px}
+
+    /* NEWS TAB */
+    .news-ticker-wrap{
+      margin:12px 12px 0;border-radius:10px;overflow:hidden;
+      background:linear-gradient(180deg,rgba(255,255,255,0.55) 0%,rgba(210,235,255,0.4) 100%);
+      border:1px solid rgba(255,255,255,0.85);border-bottom-color:rgba(140,195,240,0.4);
+      box-shadow:0 4px 16px rgba(80,150,220,0.12),inset 0 1px 0 rgba(255,255,255,0.95);
+    }
+    .news-ticker-header{
+      display:flex;align-items:center;gap:8px;padding:8px 14px;
+      background:linear-gradient(180deg,rgba(100,175,245,0.18) 0%,rgba(60,140,225,0.1) 100%);
+      border-bottom:1px solid rgba(140,195,240,0.25);
+    }
+    .news-ticker-label{font-size:10px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--text-light)}
+    .news-ticker-count{font-size:10px;color:var(--aero-blue);font-weight:700;margin-left:auto}
+    .news-ticker-body{padding:14px 16px;min-height:64px;position:relative}
+    .news-item-display{animation:newsFade .4s ease}
+    @keyframes newsFade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+    .news-item-user{font-size:10.5px;font-weight:700;color:var(--aero-blue);margin-bottom:3px;cursor:pointer}
+    .news-item-user:hover{text-decoration:underline}
+    .news-item-text{font-size:13px;color:var(--text-dark);line-height:1.6;white-space:pre-wrap;word-break:break-word}
+    .news-item-time{font-size:10px;color:var(--text-light);margin-top:5px}
+    .news-dots{display:flex;gap:5px;margin-top:10px;justify-content:center}
+    .news-dot{
+      width:7px;height:7px;border-radius:50%;cursor:pointer;
+      background:rgba(120,185,245,0.35);border:1px solid rgba(100,175,245,0.4);
+      transition:background .2s;
+    }
+    .news-dot.active{background:var(--aero-blue2);border-color:var(--aero-blue)}
+    .news-empty{padding:24px;text-align:center;color:var(--text-light);font-size:12px}
+
+    /* NEWS COMPOSE */
+    .news-compose{
+      margin:10px 12px 0;border-radius:10px;
+      background:linear-gradient(180deg,rgba(255,255,255,0.5) 0%,rgba(210,235,255,0.35) 100%);
+      border:1px solid rgba(255,255,255,0.8);border-bottom-color:rgba(140,195,240,0.35);
+      box-shadow:0 2px 10px rgba(80,150,220,0.08),inset 0 1px 0 rgba(255,255,255,0.9);
+      padding:12px 14px;
+    }
+    .news-compose-header{font-size:10px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:var(--text-light);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+    .news-compose-cost{
+      display:inline-flex;align-items:center;gap:3px;padding:2px 7px;
+      background:linear-gradient(180deg,rgba(100,175,245,0.2),rgba(60,140,225,0.15));
+      border:1px solid rgba(100,175,245,0.4);border-radius:8px;font-size:10px;
+      color:var(--aero-blue);font-weight:700;letter-spacing:.04em;
+    }
+    .news-compose textarea{
+      width:100%;min-height:56px;resize:vertical;
+      background:rgba(220,238,255,0.4);border:1px solid rgba(140,195,240,0.5);
+      border-radius:6px;padding:8px 10px;font-family:inherit;font-size:13px;
+      color:var(--text-dark);outline:none;transition:border .12s,box-shadow .12s;max-width:100%;
+    }
+    .news-compose textarea:focus{border-color:rgba(60,140,220,0.7);box-shadow:0 0 0 2px rgba(80,160,240,0.14)}
+    .news-compose-footer{display:flex;justify-content:space-between;align-items:center;margin-top:7px}
+    .news-char-count{font-size:10.5px;color:var(--text-light)}
+    .news-char-count.warn{color:#e08020}
+    .news-all{margin:10px 12px 0}
+    .news-all-item{
+      border-radius:8px;padding:10px 14px;margin-bottom:6px;
+      background:linear-gradient(180deg,rgba(255,255,255,0.45) 0%,rgba(210,232,255,0.3) 100%);
+      border:1px solid rgba(255,255,255,0.75);border-bottom-color:rgba(140,195,240,0.3);
+      box-shadow:0 1px 6px rgba(80,150,220,0.06),inset 0 1px 0 rgba(255,255,255,0.85);
+    }
   </style>
 </head>
 <body>
@@ -685,6 +767,7 @@ function render() {
   if (!token) { app.innerHTML = renderAuth(); return bindAuth(); }
   app.innerHTML = renderShell();
   if (view === 'feed') loadFeed();
+  else if (view === 'news') loadNews();
   else if (view === 'explore') loadExplore();
   else if (view === 'profile' && profileUser) loadProfile(profileUser);
   else if (view === 'settings') renderSettings();
@@ -734,6 +817,7 @@ function renderShell() {
       <span class="logo"><img src="${LOGO_URL}" alt="" style="height:32px;width:32px;object-fit:contain;vertical-align:middle;margin-right:6px;filter:drop-shadow(0 1px 3px rgba(30,80,160,0.5))">Aero World</span>
       <div class="nav-links">
         <button class="${view === 'feed' ? 'active' : ''}" onclick="goto('feed')">Feed</button>
+        <button class="${view === 'news' ? 'active' : ''}" onclick="goto('news')">📰 News</button>
         <button class="${view === 'explore' ? 'active' : ''}" onclick="goto('explore')">Explore</button>
         <button class="${view === 'profile' && profileUser === me?.username ? 'active' : ''}" onclick="goto('profile', me?.username)">@${escHtml(me?.username || '')}</button>
         <button class="${view === 'settings' ? 'active' : ''}" onclick="goto('settings')">⚙</button>
@@ -750,8 +834,9 @@ function goto(v, user) {
 }
 
 async function loadFeed() {
+  await fetchPoints();
   const content = document.getElementById('content');
-  content.innerHTML = `
+  content.innerHTML = renderAeroPointsBar() + `
     <div class="compose">
       <textarea id="ta" placeholder="What's on your mind?" rows="3"></textarea>
       <div id="media-preview-wrap" style="display:none">
@@ -1518,6 +1603,170 @@ function logout() {
   token = null; me = null;
   localStorage.removeItem('token'); localStorage.removeItem('me');
   render();
+}
+
+// ── AERO POINTS ───────────────────────────────────────────────
+let _aeroPoints = 0;
+
+async function fetchPoints() {
+  try {
+    const d = await api('GET', '/api/me/points');
+    if (typeof d.aero_points === 'number') {
+      _aeroPoints = d.aero_points;
+      // Update points display if visible
+      const el = document.getElementById('ap-val');
+      if (el) el.textContent = _aeroPoints;
+      const hint = document.getElementById('ap-hint');
+      if (hint) hint.textContent = _aeroPoints >= 10
+        ? `✨ You can send a News!`
+        : `${10 - _aeroPoints} more point${10 - _aeroPoints !== 1 ? 's' : ''} to send News`;
+    }
+  } catch {}
+}
+
+function renderAeroPointsBar() {
+  const progress = Math.min(_aeroPoints % 10, 10);
+  const hint = _aeroPoints >= 10
+    ? `✨ You can send a News!`
+    : `${10 - _aeroPoints} more point${10 - _aeroPoints !== 1 ? 's' : ''} to send News`;
+  return `<div class="aero-points-bar">
+    <div class="aero-points-icon">⭐</div>
+    <div class="aero-points-info">
+      <div class="aero-points-label">Aero-Points</div>
+      <div class="aero-points-val" id="ap-val">${_aeroPoints}</div>
+      <div class="aero-points-hint" id="ap-hint">${hint}</div>
+    </div>
+    <div style="font-size:10px;color:var(--text-light);text-align:right;line-height:1.5">
+      +1 point<br>per 2 posts/comments
+    </div>
+  </div>`;
+}
+
+// ── NEWS ──────────────────────────────────────────────────────
+let _newsItems = [];
+let _newsIndex = 0;
+let _newsRotateInterval = null;
+
+function stopNewsRotation() {
+  if (_newsRotateInterval) { clearInterval(_newsRotateInterval); _newsRotateInterval = null; }
+}
+
+function startNewsRotation() {
+  stopNewsRotation();
+  if (_newsItems.length <= 1) return;
+  _newsRotateInterval = setInterval(() => {
+    _newsIndex = (_newsIndex + 1) % _newsItems.length;
+    renderNewsTickerItem();
+  }, 25000);
+}
+
+function renderNewsTickerItem() {
+  const body = document.getElementById('news-ticker-body');
+  if (!body) return;
+  const item = _newsItems[_newsIndex];
+  if (!item) return;
+  const dotsHtml = _newsItems.length > 1
+    ? `<div class="news-dots">${_newsItems.map((_, i) =>
+        `<div class="news-dot ${i === _newsIndex ? 'active' : ''}" onclick="jumpNewsItem(${i})"></div>`
+      ).join('')}</div>`
+    : '';
+  body.innerHTML = `<div class="news-item-display">
+    <div class="news-item-user" onclick="goto('profile','${escHtml(item.username)}')">${escHtml(item.username)}</div>
+    <div class="news-item-text">${escHtml(item.content)}</div>
+    <div class="news-item-time">${timeAgo(item.created_at)}</div>
+    ${dotsHtml}
+  </div>`;
+}
+
+function jumpNewsItem(i) {
+  _newsIndex = i;
+  renderNewsTickerItem();
+  // Reset rotation timer
+  startNewsRotation();
+}
+
+async function loadNews() {
+  await fetchPoints();
+  const content = document.getElementById('content');
+  _newsItems = [];
+  stopNewsRotation();
+
+  const news = await api('GET', '/api/news');
+  if (Array.isArray(news)) _newsItems = news;
+  _newsIndex = 0;
+
+  const tickerHtml = `<div class="news-ticker-wrap">
+    <div class="news-ticker-header">
+      <span>📰</span>
+      <span class="news-ticker-label">Latest News</span>
+      <span class="news-ticker-count">${_newsItems.length} item${_newsItems.length !== 1 ? 's' : ''}</span>
+    </div>
+    <div class="news-ticker-body" id="news-ticker-body">
+      ${_newsItems.length === 0
+        ? `<div class="news-empty">No news yet. Be the first to send one!</div>`
+        : ''}
+    </div>
+  </div>`;
+
+  const composeHtml = `<div class="news-compose">
+    <div class="news-compose-header">
+      Send to News
+      <span class="news-compose-cost">⭐ 10 Points</span>
+    </div>
+    <textarea id="news-ta" placeholder="Write your news (max 456 characters)…" maxlength="456"
+      oninput="updateNewsCharCount()"></textarea>
+    <div class="news-compose-footer">
+      <span class="news-char-count" id="news-char-count">0 / 456</span>
+      <button class="post-btn" onclick="submitNews()">Send News</button>
+    </div>
+    <div id="news-err" style="font-size:11px;color:#c0392b;margin-top:5px"></div>
+  </div>`;
+
+  const allHtml = `<div class="news-all" id="news-all">
+    ${_newsItems.length > 0 ? `<div class="content-header" style="margin-bottom:0">All News</div>
+    ${_newsItems.map(item => `
+      <div class="news-all-item">
+        <div class="news-item-user" onclick="goto('profile','${escHtml(item.username)}')">${escHtml(item.username)}</div>
+        <div class="news-item-text">${escHtml(item.content)}</div>
+        <div class="news-item-time">${timeAgo(item.created_at)}</div>
+      </div>`).join('')}` : ''}
+  </div>`;
+
+  content.innerHTML = renderAeroPointsBar() + tickerHtml + composeHtml + allHtml;
+
+  if (_newsItems.length > 0) {
+    renderNewsTickerItem();
+    startNewsRotation();
+  }
+}
+
+function updateNewsCharCount() {
+  const ta = document.getElementById('news-ta');
+  const el = document.getElementById('news-char-count');
+  if (!ta || !el) return;
+  const len = ta.value.length;
+  el.textContent = `${len} / 456`;
+  el.classList.toggle('warn', len > 400);
+}
+
+async function submitNews() {
+  const ta = document.getElementById('news-ta');
+  const err = document.getElementById('news-err');
+  if (!ta) return;
+  const text = ta.value.trim();
+  if (!text) { err.textContent = 'Please write something first.'; return; }
+  if (_aeroPoints < 10) { err.textContent = `Not enough Aero-Points (you have ${_aeroPoints}, need 10).`; return; }
+  err.textContent = '';
+  const btn = document.querySelector('.news-compose .post-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
+  const d = await api('POST', '/api/news', { content: text });
+  if (btn) { btn.disabled = false; btn.textContent = 'Send News'; }
+  if (d.error) { err.textContent = d.error; return; }
+  ta.value = '';
+  updateNewsCharCount();
+  _aeroPoints -= 10;
+  // Reload news view
+  loadNews();
 }
 
 verifyToken().then(render);
