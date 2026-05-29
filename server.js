@@ -13,6 +13,8 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const connStr = (() => {
   const internal = process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.POSTGRESQL_URL;
   const pub = process.env.DATABASE_PUBLIC_URL || process.env.POSTGRES_PUBLIC_URL;
+  // Prefer public URL if internal hostname is a .railway.internal address,
+  // since private networking may not be available in all Railway environments.
   if (internal && internal.includes('.railway.internal') && pub) return pub;
   return internal || pub;
 })();
@@ -97,22 +99,13 @@ await pool.query(`
     is_read BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMPTZ DEFAULT NOW()
   );
-
-  CREATE TABLE IF NOT EXISTS music (
-    id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-    title TEXT NOT NULL,
-    composer TEXT NOT NULL,
-    cover_url TEXT DEFAULT '',
-    audio_url TEXT NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT NOW()
-  );
 `);
 
+// In-memory rate limit tracker: userId -> array of post timestamps (ms)
 const postTimestamps = new Map();
-const RATE_WINDOW_MS = 20 * 1000;   
-const RATE_MAX_POSTS = 4;            
-const AUTO_TIMEOUT_MS = 5 * 60 * 1000; 
+const RATE_WINDOW_MS = 20 * 1000;   // 20 seconds
+const RATE_MAX_POSTS = 4;            // max posts per window
+const AUTO_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 
 const safeAlterQueries = [
   `ALTER TABLE users ADD COLUMN IF NOT EXISTS banner_url TEXT DEFAULT ''`,
@@ -152,35 +145,73 @@ const auth = (req, res, next) => {
 
 app.post('/api/register', async (req, res) => {
   const { username, password } = req.body;
-  if (!username || !password) return res.status(400).json({ error: 'Required fields missing' });
+
+  if (!username || !password) {
+    return res.status(400).json({ error: 'Required fields missing' });
+  }
+
   try {
     const hash = await bcrypt.hash(password, 10);
+
     const { rows } = await pool.query(
-      `INSERT INTO users (username, password) VALUES ($1, $2) RETURNING id, username, bio, banner_url, profile_background, accent_color, profile_theme, profile_widgets, userbars, avatar_url, created_at`,
+      `INSERT INTO users (username, password)
+       VALUES ($1, $2)
+       RETURNING id, username, bio, banner_url, profile_background,
+       accent_color, profile_theme, profile_widgets, userbars, avatar_url, created_at`,
       [username, hash]
     );
-    res.json({ token: jwt.sign(rows[0], SECRET, { expiresIn: '30d' }), user: rows[0] });
+
+    const user = rows[0];
+
+    res.json({
+      token: jwt.sign(user, SECRET, { expiresIn: '30d' }),
+      user
+    });
   } catch (e) {
-    if (e.code === '23505') return res.status(409).json({ error: 'Username already taken' });
+    if (e.code === '23505') {
+      return res.status(409).json({ error: 'Username already taken' });
+    }
+
+    console.error(e);
     res.status(500).json({ error: 'Server error' });
   }
 });
 
 app.post('/api/login', async (req, res) => {
   const { username, password } = req.body;
-  const { rows } = await pool.query('SELECT * FROM users WHERE username=$1', [username]);
+
+  const { rows } = await pool.query(
+    'SELECT * FROM users WHERE username=$1',
+    [username]
+  );
+
   const user = rows[0];
-  if (!user || !(await bcrypt.compare(password, user.password))) return res.status(401).json({ error: 'Invalid credentials' });
+
+  if (!user || !(await bcrypt.compare(password, user.password))) {
+    return res.status(401).json({ error: 'Invalid credentials' });
+  }
+
   const { password: _, ...safe } = user;
-  res.json({ token: jwt.sign(safe, SECRET, { expiresIn: '30d' }), user: safe });
+
+  res.json({
+    token: jwt.sign(safe, SECRET, { expiresIn: '30d' }),
+    user: safe
+  });
 });
 
 app.get('/api/feed', auth, async (req, res) => {
   const { rows } = await pool.query(`
     SELECT p.*, u.username, u.accent_color, u.banner_url,
-           COUNT(DISTINCT l.user_id)::int AS like_count, BOOL_OR(l.user_id = $1) AS liked, COUNT(DISTINCT c.id)::int AS comment_count
-    FROM posts p JOIN users u ON u.id = p.user_id LEFT JOIN likes l ON l.post_id = p.id LEFT JOIN comments c ON c.post_id = p.id
-    GROUP BY p.id, u.username, u.accent_color, u.banner_url ORDER BY p.id DESC LIMIT 100
+           COUNT(DISTINCT l.user_id)::int AS like_count,
+           BOOL_OR(l.user_id = $1) AS liked,
+           COUNT(DISTINCT c.id)::int AS comment_count
+    FROM posts p
+    JOIN users u ON u.id = p.user_id
+    LEFT JOIN likes l ON l.post_id = p.id
+    LEFT JOIN comments c ON c.post_id = p.id
+    GROUP BY p.id, u.username, u.accent_color, u.banner_url
+    ORDER BY p.id DESC
+    LIMIT 100
   `, [req.user.id]);
   res.json(rows);
 });
@@ -188,81 +219,174 @@ app.get('/api/feed', auth, async (req, res) => {
 app.get('/api/explore', auth, async (req, res) => {
   const { rows } = await pool.query(`
     SELECT p.*, u.username, u.accent_color, u.banner_url,
-           COUNT(DISTINCT l.user_id)::int AS like_count, BOOL_OR(l.user_id = $1) AS liked, COUNT(DISTINCT c.id)::int AS comment_count
-    FROM posts p JOIN users u ON u.id = p.user_id LEFT JOIN likes l ON l.post_id = p.id LEFT JOIN comments c ON c.post_id = p.id
-    GROUP BY p.id, u.username, u.accent_color, u.banner_url ORDER BY p.id DESC LIMIT 50
+           COUNT(DISTINCT l.user_id)::int AS like_count,
+           BOOL_OR(l.user_id = $1) AS liked,
+           COUNT(DISTINCT c.id)::int AS comment_count
+    FROM posts p
+    JOIN users u ON u.id = p.user_id
+    LEFT JOIN likes l ON l.post_id = p.id
+    LEFT JOIN comments c ON c.post_id = p.id
+    GROUP BY p.id, u.username, u.accent_color, u.banner_url
+    ORDER BY p.id DESC
+    LIMIT 50
   `, [req.user.id]);
   res.json(rows);
 });
 
+// Helper: check if user is currently timed out. Returns { timedOut, expiresAt, reason } or null.
 async function getUserTimeout(userId) {
-  const { rows } = await pool.query('SELECT expires_at, reason FROM timeouts WHERE user_id=$1 AND expires_at > NOW()', [userId]);
+  const { rows } = await pool.query(
+    'SELECT expires_at, reason FROM timeouts WHERE user_id=$1 AND expires_at > NOW()',
+    [userId]
+  );
   if (!rows[0]) return null;
   return { expiresAt: rows[0].expires_at, reason: rows[0].reason };
 }
 
+// Helper: apply a timeout to a user
 async function applyTimeout(userId, durationMs, reason = '') {
   const expiresAt = new Date(Date.now() + durationMs);
   await pool.query(
-    `INSERT INTO timeouts (user_id, expires_at, reason) VALUES ($1, $2, $3) ON CONFLICT (user_id) DO UPDATE SET expires_at=$2, reason=$3`,
+    `INSERT INTO timeouts (user_id, expires_at, reason)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (user_id) DO UPDATE SET expires_at=$2, reason=$3`,
     [userId, expiresAt, reason]
   );
 }
 
+// GET /api/me/timeout — frontend polls this to know if user is timed out
 app.get('/api/me/timeout', auth, async (req, res) => {
   const t = await getUserTimeout(req.user.id);
   res.json(t ? { timedOut: true, expiresAt: t.expiresAt, reason: t.reason } : { timedOut: false });
 });
 
-app.post('/api/posts', auth, async (req, res) => {
-  const activeTimeout = await getUserTimeout(req.user.id);
-  if (activeTimeout) return res.status(429).json({ error: 'timeout', expiresAt: activeTimeout.expiresAt, reason: activeTimeout.reason || '' });
+// POST /api/admin/timeout — manually time out a user (requires admin secret header)
+app.post('/api/admin/timeout', async (req, res) => {
+  const adminSecret = process.env.ADMIN_SECRET || 'admin-secret-changeme';
+  if (req.headers['x-admin-secret'] !== adminSecret) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+  const { username, duration_minutes, reason } = req.body;
+  if (!username || !duration_minutes) {
+    return res.status(400).json({ error: 'username and duration_minutes required' });
+  }
+  const { rows } = await pool.query('SELECT id FROM users WHERE username=$1', [username]);
+  if (!rows[0]) return res.status(404).json({ error: 'User not found' });
+  const ms = parseInt(duration_minutes) * 60 * 1000;
+  await applyTimeout(rows[0].id, ms, reason || '');
+  res.json({ ok: true, username, expires_at: new Date(Date.now() + ms) });
+});
 
+// DELETE /api/admin/timeout — remove a timeout early
+app.delete('/api/admin/timeout', async (req, res) => {
+  const adminSecret = process.env.ADMIN_SECRET || 'admin-secret-changeme';
+  if (req.headers['x-admin-secret'] !== adminSecret) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+  const { username } = req.body;
+  if (!username) return res.status(400).json({ error: 'username required' });
+  const { rows } = await pool.query('SELECT id FROM users WHERE username=$1', [username]);
+  if (!rows[0]) return res.status(404).json({ error: 'User not found' });
+  await pool.query('DELETE FROM timeouts WHERE user_id=$1', [rows[0].id]);
+  res.json({ ok: true });
+});
+
+app.post('/api/posts', auth, async (req, res) => {
+  // 1. Check for active manual/auto timeout in DB
+  const activeTimeout = await getUserTimeout(req.user.id);
+  if (activeTimeout) {
+    return res.status(429).json({
+      error: 'timeout',
+      expiresAt: activeTimeout.expiresAt,
+      reason: activeTimeout.reason || ''
+    });
+  }
+
+  // 2. Rate-limit: max 4 posts per 20 seconds → auto 5-min timeout
   const now = Date.now();
   const uid = req.user.id;
   const stamps = (postTimestamps.get(uid) || []).filter(t => now - t < RATE_WINDOW_MS);
   if (stamps.length >= RATE_MAX_POSTS) {
     await applyTimeout(uid, AUTO_TIMEOUT_MS, 'Posting too fast');
     postTimestamps.delete(uid);
-    return res.status(429).json({ error: 'timeout', expiresAt: new Date(now + AUTO_TIMEOUT_MS), reason: 'Posting too fast' });
+    return res.status(429).json({
+      error: 'timeout',
+      expiresAt: new Date(now + AUTO_TIMEOUT_MS),
+      reason: 'Posting too fast'
+    });
   }
   stamps.push(now);
   postTimestamps.set(uid, stamps);
 
   const { content, media_url, media_type, is_sticker } = req.body;
-  if (!content?.trim() && !media_url) return res.status(400).json({ error: 'Post is empty' });
-  if (media_url && !is_sticker && media_url.length > 34 * 1024 * 1024) return res.status(400).json({ error: 'Media too large (max 25 MB)' });
+
+  if (!content?.trim() && !media_url) {
+    return res.status(400).json({ error: 'Post is empty' });
+  }
+
+  // Stickers are remote URLs from GitHub — skip base64 size check
+  if (media_url && !is_sticker && media_url.length > 34 * 1024 * 1024) {
+    return res.status(400).json({ error: 'Media too large (max 25 MB)' });
+  }
+
+  const ALLOWED = ['image/png','image/jpeg','image/gif','video/mp4'];
+  if (media_type && !ALLOWED.includes(media_type)) {
+    return res.status(400).json({ error: 'Unsupported media type' });
+  }
 
   const { rows } = await pool.query(
-    `INSERT INTO posts (user_id, content, media_url, media_type, is_sticker) VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+    `INSERT INTO posts (user_id, content, media_url, media_type, is_sticker)
+     VALUES ($1, $2, $3, $4, $5)
+     RETURNING *`,
     [req.user.id, (content || '').trim(), media_url || '', media_type || '', !!is_sticker]
   );
 
-  const { rows: userRows } = await pool.query('SELECT username, avatar_url, accent_color FROM users WHERE id=$1', [req.user.id]);
+  // Fetch fresh user data so accent_color and avatar_url are always current
+  const { rows: userRows } = await pool.query(
+    'SELECT username, avatar_url, accent_color FROM users WHERE id=$1',
+    [req.user.id]
+  );
   const u = userRows[0] || {};
 
-  res.json({ ...rows[0], username: u.username || req.user.username, avatar_url: u.avatar_url || '', accent_color: u.accent_color || '#4da3ff' });
+  res.json({
+    ...rows[0],
+    username:     u.username     || req.user.username,
+    avatar_url:   u.avatar_url   || '',
+    accent_color: u.accent_color || '#4da3ff',
+  });
+  // Award activity point (fire-and-forget)
   incrementActivity(req.user.id).catch(() => {});
 });
-
 app.post('/api/posts/:id/like', auth, async (req, res) => {
   const postId = parseInt(req.params.id);
   const userId = req.user.id;
-  const { rows } = await pool.query('SELECT 1 FROM likes WHERE user_id=$1 AND post_id=$2', [userId, postId]);
+  const { rows } = await pool.query(
+    'SELECT 1 FROM likes WHERE user_id=$1 AND post_id=$2', [userId, postId]
+  );
   if (rows.length) {
     await pool.query('DELETE FROM likes WHERE user_id=$1 AND post_id=$2', [userId, postId]);
   } else {
     await pool.query('INSERT INTO likes (user_id, post_id) VALUES ($1,$2) ON CONFLICT DO NOTHING', [userId, postId]);
+    // Notify post owner
     const { rows: postRows } = await pool.query('SELECT user_id FROM posts WHERE id=$1', [postId]);
-    if (postRows[0]) createNotification(postRows[0].user_id, userId, req.user.username, 'like', postId).catch(() => {});
+    if (postRows[0]) {
+      createNotification(postRows[0].user_id, userId, req.user.username, 'like', postId).catch(() => {});
+    }
   }
-  const { rows: cnt } = await pool.query('SELECT COUNT(*)::int AS like_count FROM likes WHERE post_id=$1', [postId]);
+  const { rows: cnt } = await pool.query(
+    'SELECT COUNT(*)::int AS like_count FROM likes WHERE post_id=$1', [postId]
+  );
   res.json({ liked: !rows.length, like_count: cnt[0].like_count });
 });
 
+// ── COMMENTS ─────────────────────────────────────────────────
 app.get('/api/posts/:id/comments', auth, async (req, res) => {
   const { rows } = await pool.query(`
-    SELECT c.*, u.username, u.avatar_url, u.accent_color FROM comments c JOIN users u ON u.id = c.user_id WHERE c.post_id = $1 ORDER BY c.id ASC
+    SELECT c.*, u.username, u.avatar_url, u.accent_color
+    FROM comments c
+    JOIN users u ON u.id = c.user_id
+    WHERE c.post_id = $1
+    ORDER BY c.id ASC
   `, [parseInt(req.params.id)]);
   res.json(rows);
 });
@@ -270,187 +394,390 @@ app.get('/api/posts/:id/comments', auth, async (req, res) => {
 app.post('/api/posts/:id/comments', auth, async (req, res) => {
   const content = (req.body.content || '').trim().slice(0, 500);
   if (!content) return res.status(400).json({ error: 'Empty comment' });
-  const { rows } = await pool.query(`INSERT INTO comments (post_id, user_id, content) VALUES ($1, $2, $3) RETURNING *`, [parseInt(req.params.id), req.user.id, content]);
-  const { rows: userRows } = await pool.query('SELECT username, avatar_url, accent_color FROM users WHERE id=$1', [req.user.id]);
+  const { rows } = await pool.query(
+    `INSERT INTO comments (post_id, user_id, content)
+     VALUES ($1, $2, $3) RETURNING *`,
+    [parseInt(req.params.id), req.user.id, content]
+  );
+  // Fetch fresh user data from DB so avatar_url is always up to date
+  const { rows: userRows } = await pool.query(
+    'SELECT username, avatar_url, accent_color FROM users WHERE id=$1',
+    [req.user.id]
+  );
   const u = userRows[0] || {};
   res.json({ ...rows[0], username: u.username || req.user.username, avatar_url: u.avatar_url || '', accent_color: u.accent_color || '#4da3ff' });
+  // Notify post owner
   const { rows: postRows } = await pool.query('SELECT user_id FROM posts WHERE id=$1', [parseInt(req.params.id)]);
-  if (postRows[0]) createNotification(postRows[0].user_id, req.user.id, req.user.username, 'comment', parseInt(req.params.id)).catch(() => {});
+  if (postRows[0]) {
+    createNotification(postRows[0].user_id, req.user.id, req.user.username, 'comment', parseInt(req.params.id)).catch(() => {});
+  }
+  // Award activity point (fire-and-forget)
   incrementActivity(req.user.id).catch(() => {});
 });
 
 app.delete('/api/comments/:id', auth, async (req, res) => {
-  await pool.query('DELETE FROM comments WHERE id=$1 AND user_id=$2', [parseInt(req.params.id), req.user.id]);
+  await pool.query(
+    'DELETE FROM comments WHERE id=$1 AND user_id=$2',
+    [parseInt(req.params.id), req.user.id]
+  );
   res.json({ ok: true });
 });
 
 app.delete('/api/posts/:id', auth, async (req, res) => {
-  await pool.query('DELETE FROM posts WHERE id=$1 AND user_id=$2', [req.params.id, req.user.id]);
+  await pool.query(
+    'DELETE FROM posts WHERE id=$1 AND user_id=$2',
+    [req.params.id, req.user.id]
+  );
+
   res.json({ ok: true });
 });
 
 app.get('/api/users/:username', auth, async (req, res) => {
-  const { rows } = await pool.query(`SELECT id, username, bio, banner_url, profile_background, accent_color, profile_theme, profile_widgets, userbars, avatar_url, created_at, pinned_post_id FROM users WHERE username=$1`, [req.params.username]);
-  if (!rows[0]) return res.status(404).json({ error: 'User not found' });
+  const { rows } = await pool.query(
+    `SELECT id, username, bio,
+            banner_url,
+            profile_background,
+            accent_color,
+            profile_theme,
+            profile_widgets,
+            userbars,
+            avatar_url,
+            created_at,
+            pinned_post_id
+     FROM users
+     WHERE username=$1`,
+    [req.params.username]
+  );
+
+  if (!rows[0]) {
+    return res.status(404).json({ error: 'User not found' });
+  }
+
   const user = rows[0];
+
   const [postsR, followersR, followingR, isFollowingR] = await Promise.all([
-    pool.query(`SELECT p.*, COUNT(DISTINCT l.user_id)::int AS like_count, BOOL_OR(l.user_id = $2) AS liked, COUNT(DISTINCT c.id)::int AS comment_count FROM posts p LEFT JOIN likes l ON l.post_id = p.id LEFT JOIN comments c ON c.post_id = p.id WHERE p.user_id = $1 GROUP BY p.id ORDER BY CASE WHEN p.id = $3 THEN 0 ELSE 1 END, p.id DESC`, [user.id, req.user.id, user.pinned_post_id || 0]),
+    pool.query(`
+      SELECT p.*, COUNT(DISTINCT l.user_id)::int AS like_count,
+             BOOL_OR(l.user_id = $2) AS liked,
+             COUNT(DISTINCT c.id)::int AS comment_count
+      FROM posts p
+      LEFT JOIN likes l ON l.post_id = p.id
+      LEFT JOIN comments c ON c.post_id = p.id
+      WHERE p.user_id = $1
+      GROUP BY p.id
+      ORDER BY
+        CASE WHEN p.id = $3 THEN 0 ELSE 1 END,
+        p.id DESC
+    `, [user.id, req.user.id, user.pinned_post_id || 0]),
     pool.query('SELECT COUNT(*) FROM follows WHERE following=$1', [user.id]),
     pool.query('SELECT COUNT(*) FROM follows WHERE follower=$1', [user.id]),
     pool.query('SELECT 1 FROM follows WHERE follower=$1 AND following=$2', [req.user.id, user.id])
   ]);
-  res.json({ ...user, posts: postsR.rows, followers: parseInt(followersR.rows[0].count), following: parseInt(followingR.rows[0].count), isFollowing: isFollowingR.rows.length > 0, pinned_post_id: user.pinned_post_id || null });
+
+  res.json({
+    ...user,
+    posts: postsR.rows,
+    followers: parseInt(followersR.rows[0].count),
+    following: parseInt(followingR.rows[0].count),
+    isFollowing: isFollowingR.rows.length > 0,
+    pinned_post_id: user.pinned_post_id || null
+  });
 });
 
 app.post('/api/follow/:id', auth, async (req, res) => {
   const id = parseInt(req.params.id);
-  const { rows } = await pool.query('SELECT 1 FROM follows WHERE follower=$1 AND following=$2', [req.user.id, id]);
-  if (rows.length) await pool.query('DELETE FROM follows WHERE follower=$1 AND following=$2', [req.user.id, id]);
-  else {
-    await pool.query('INSERT INTO follows (follower, following) VALUES ($1,$2)', [req.user.id, id]);
+
+  const { rows } = await pool.query(
+    'SELECT 1 FROM follows WHERE follower=$1 AND following=$2',
+    [req.user.id, id]
+  );
+
+  if (rows.length) {
+    await pool.query(
+      'DELETE FROM follows WHERE follower=$1 AND following=$2',
+      [req.user.id, id]
+    );
+  } else {
+    await pool.query(
+      'INSERT INTO follows (follower, following) VALUES ($1,$2)',
+      [req.user.id, id]
+    );
     createNotification(id, req.user.id, req.user.username, 'follow', null).catch(() => {});
   }
+
   res.json({ ok: true });
 });
 
 app.get('/api/me', auth, async (req, res) => {
-  const { rows } = await pool.query(`SELECT id, username, bio, banner_url, profile_background, accent_color, profile_theme, profile_widgets, userbars, avatar_url, created_at FROM users WHERE id=$1`, [req.user.id]);
-  if (!rows[0]) return res.status(404).json({ error: 'User not found' });
+  const { rows } = await pool.query(
+    `SELECT id, username, bio,
+            banner_url,
+            profile_background,
+            accent_color,
+            profile_theme,
+            profile_widgets,
+            userbars,
+            avatar_url,
+            created_at
+     FROM users
+     WHERE id=$1`,
+    [req.user.id]
+  );
+
+  if (!rows[0]) {
+    return res.status(404).json({ error: 'User not found' });
+  }
+
   res.json(rows[0]);
 });
 
 app.patch('/api/me', auth, async (req, res) => {
   try {
-    const { bio, banner_url, profile_background, accent_color, profile_theme, profile_widgets, userbars, avatar_url } = req.body || {};
-    const safeWidgets = Array.isArray(profile_widgets) ? profile_widgets.slice(0, 12) : [];
-    const safeUserbars = Array.isArray(userbars) ? userbars.slice(0, 12) : [];
+    const {
+      bio,
+      banner_url,
+      profile_background,
+      accent_color,
+      profile_theme,
+      profile_widgets,
+      userbars,
+      avatar_url
+    } = req.body || {};
+
+    const safeWidgets = Array.isArray(profile_widgets)
+      ? profile_widgets.slice(0, 12)
+      : [];
+
+    const safeUserbars = Array.isArray(userbars)
+      ? userbars.slice(0, 12)
+      : [];
+
     await pool.query(
-      `UPDATE users SET bio = $1, banner_url = $2, profile_background = $3, accent_color = $4, profile_theme = $5, profile_widgets = $6::jsonb, userbars = $7::jsonb, avatar_url = $8 WHERE id = $9`,
-      [typeof bio === 'string' ? bio.slice(0, 300) : '', typeof banner_url === 'string' ? banner_url.slice(0, 2000) : '', typeof profile_background === 'string' ? profile_background.slice(0, 2000) : '', typeof accent_color === 'string' ? accent_color : '#4da3ff', typeof profile_theme === 'string' ? profile_theme : 'aero', JSON.stringify(safeWidgets), JSON.stringify(safeUserbars), typeof avatar_url === 'string' ? avatar_url.slice(0, 2000) : '', req.user.id]
+      `UPDATE users
+       SET bio = $1,
+           banner_url = $2,
+           profile_background = $3,
+           accent_color = $4,
+           profile_theme = $5,
+           profile_widgets = $6::jsonb,
+           userbars = $7::jsonb,
+           avatar_url = $8
+       WHERE id = $9`,
+      [
+        typeof bio === 'string' ? bio.slice(0, 300) : '',
+        typeof banner_url === 'string' ? banner_url.slice(0, 2000) : '',
+        typeof profile_background === 'string' ? profile_background.slice(0, 2000) : '',
+        typeof accent_color === 'string' ? accent_color : '#4da3ff',
+        typeof profile_theme === 'string' ? profile_theme : 'aero',
+        JSON.stringify(safeWidgets),
+        JSON.stringify(safeUserbars),
+        typeof avatar_url === 'string' ? avatar_url.slice(0, 2000) : '',
+        req.user.id
+      ]
     );
-    const { rows } = await pool.query(`SELECT id, username, bio, banner_url, profile_background, accent_color, profile_theme, profile_widgets, userbars, avatar_url, created_at FROM users WHERE id=$1`, [req.user.id]);
+
+    const { rows } = await pool.query(
+      `SELECT id, username, bio,
+              banner_url,
+              profile_background,
+              accent_color,
+              profile_theme,
+              profile_widgets,
+              userbars,
+              avatar_url,
+              created_at
+       FROM users
+       WHERE id=$1`,
+      [req.user.id]
+    );
+
     res.json({ ok: true, user: rows[0] });
-  } catch (e) { res.status(500).json({ error: 'Failed to update profile' }); }
+  } catch (e) {
+    console.error('PROFILE_UPDATE_ERROR', e);
+    res.status(500).json({ error: 'Failed to update profile' });
+  }
 });
 
 app.get('/api/search', auth, async (req, res) => {
   const q = `%${(req.query.q || '').toLowerCase()}%`;
-  const { rows } = await pool.query(`SELECT id, username, bio, banner_url, accent_color, created_at FROM users WHERE LOWER(username) LIKE $1 LIMIT 20`, [q]);
+
+  const { rows } = await pool.query(
+    `SELECT id,
+            username,
+            bio,
+            banner_url,
+            accent_color,
+            created_at
+     FROM users
+     WHERE LOWER(username) LIKE $1
+     LIMIT 20`,
+    [q]
+  );
+
   res.json(rows);
 });
 
+// Helper: create a notification (fire-and-forget safe)
 async function createNotification(toUserId, fromUserId, fromUsername, type, postId = null) {
-  if (toUserId === fromUserId) return; 
-  try { await pool.query(`INSERT INTO notifications (user_id, from_user_id, from_username, type, post_id) VALUES ($1, $2, $3, $4, $5)`, [toUserId, fromUserId, fromUsername, type, postId]); } catch {}
+  if (toUserId === fromUserId) return; // don't notify yourself
+  try {
+    await pool.query(
+      `INSERT INTO notifications (user_id, from_user_id, from_username, type, post_id)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [toUserId, fromUserId, fromUsername, type, postId]
+    );
+  } catch {}
 }
 
+// GET /api/notifications — returns notifications for current user
 app.get('/api/notifications', auth, async (req, res) => {
-  const { rows } = await pool.query(`SELECT id, from_username, type, post_id, is_read, created_at FROM notifications WHERE user_id = $1 ORDER BY id DESC LIMIT 60`, [req.user.id]);
+  const { rows } = await pool.query(
+    `SELECT id, from_username, type, post_id, is_read, created_at
+     FROM notifications
+     WHERE user_id = $1
+     ORDER BY id DESC
+     LIMIT 60`,
+    [req.user.id]
+  );
   res.json(rows);
 });
 
+// POST /api/notifications/read — mark all notifications as read
 app.post('/api/notifications/read', auth, async (req, res) => {
-  await pool.query('UPDATE notifications SET is_read = TRUE WHERE user_id = $1', [req.user.id]);
+  await pool.query(
+    'UPDATE notifications SET is_read = TRUE WHERE user_id = $1',
+    [req.user.id]
+  );
   res.json({ ok: true });
 });
 
+// GET /api/notifications/unread-count — quick unread badge count
 app.get('/api/notifications/unread-count', auth, async (req, res) => {
-  const { rows } = await pool.query('SELECT COUNT(*)::int AS count FROM notifications WHERE user_id=$1 AND is_read=FALSE', [req.user.id]);
+  const { rows } = await pool.query(
+    'SELECT COUNT(*)::int AS count FROM notifications WHERE user_id=$1 AND is_read=FALSE',
+    [req.user.id]
+  );
   res.json({ count: rows[0]?.count || 0 });
 });
 
+
+
+// Helper: increment activity count and award points if threshold reached
 async function incrementActivity(userId) {
-  const { rows } = await pool.query(`UPDATE users SET activity_count = activity_count + 1 WHERE id = $1 RETURNING activity_count, aero_points`, [userId]);
+  const { rows } = await pool.query(
+    `UPDATE users
+     SET activity_count = activity_count + 1
+     WHERE id = $1
+     RETURNING activity_count, aero_points`,
+    [userId]
+  );
   if (!rows[0]) return;
-  if (rows[0].activity_count % 2 === 0) await pool.query(`UPDATE users SET aero_points = aero_points + 1 WHERE id = $1`, [userId]);
+  const { activity_count } = rows[0];
+  // Every 2 activities = 1 point
+  if (activity_count % 2 === 0) {
+    await pool.query(
+      `UPDATE users SET aero_points = aero_points + 1 WHERE id = $1`,
+      [userId]
+    );
+  }
 }
 
+// GET /api/me/points — returns current points
 app.get('/api/me/points', auth, async (req, res) => {
-  const { rows } = await pool.query('SELECT aero_points, activity_count FROM users WHERE id=$1', [req.user.id]);
+  const { rows } = await pool.query(
+    'SELECT aero_points, activity_count FROM users WHERE id=$1',
+    [req.user.id]
+  );
   res.json(rows[0] || { aero_points: 0, activity_count: 0 });
 });
 
+// GET /api/news — returns latest news items
 app.get('/api/news', auth, async (req, res) => {
-  const { rows } = await pool.query(`SELECT id, username, content, created_at FROM news ORDER BY id DESC LIMIT 50`);
+  const { rows } = await pool.query(
+    `SELECT id, username, content, created_at FROM news ORDER BY id DESC LIMIT 50`
+  );
   res.json(rows);
 });
 
+// POST /api/news — spend 10 points to post a news message
 app.post('/api/news', auth, async (req, res) => {
   const content = (req.body.content || '').trim().slice(0, 456);
   if (!content) return res.status(400).json({ error: 'News content is empty' });
-  const { rows: userRows } = await pool.query('SELECT aero_points, username FROM users WHERE id=$1', [req.user.id]);
+
+  // Check points
+  const { rows: userRows } = await pool.query(
+    'SELECT aero_points, username FROM users WHERE id=$1',
+    [req.user.id]
+  );
   const user = userRows[0];
-  if (!user || user.aero_points < 10) return res.status(403).json({ error: 'Not enough Aero-Points (need 10)' });
-  await pool.query('UPDATE users SET aero_points = aero_points - 10 WHERE id=$1', [req.user.id]);
-  const { rows } = await pool.query(`INSERT INTO news (user_id, username, content) VALUES ($1, $2, $3) RETURNING *`, [req.user.id, user.username, content]);
+  if (!user || user.aero_points < 10) {
+    return res.status(403).json({ error: 'Not enough Aero-Points (need 10)' });
+  }
+
+  // Deduct points and insert news
+  await pool.query(
+    'UPDATE users SET aero_points = aero_points - 10 WHERE id=$1',
+    [req.user.id]
+  );
+  const { rows } = await pool.query(
+    `INSERT INTO news (user_id, username, content) VALUES ($1, $2, $3) RETURNING *`,
+    [req.user.id, user.username, content]
+  );
   res.json(rows[0]);
 });
 
+// ── ONLINE PRESENCE ──────────────────────────────────────────
+// In-memory store: userId -> { username, lastSeen }
 const onlineMap = new Map();
-const ONLINE_TIMEOUT_MS = 45 * 1000; 
+const ONLINE_TIMEOUT_MS = 45 * 1000; // 45 seconds
 
+// POST /api/online/ping — called by clients every 30s
 app.post('/api/online/ping', auth, async (req, res) => {
   onlineMap.set(req.user.id, { username: req.user.username, lastSeen: Date.now() });
   res.json({ ok: true });
 });
 
+// DELETE /api/online/ping — called on logout/unload
 app.delete('/api/online/ping', auth, async (req, res) => {
   onlineMap.delete(req.user.id);
   res.json({ ok: true });
 });
 
+// POST /api/me/pin/:postId — pin a post to your profile (must own the post)
 app.post('/api/me/pin/:postId', auth, async (req, res) => {
   const postId = parseInt(req.params.postId);
-  const { rows } = await pool.query('SELECT id FROM posts WHERE id=$1 AND user_id=$2', [postId, req.user.id]);
+  // Verify the post belongs to the requesting user
+  const { rows } = await pool.query(
+    'SELECT id FROM posts WHERE id=$1 AND user_id=$2',
+    [postId, req.user.id]
+  );
   if (!rows[0]) return res.status(403).json({ error: 'Post not found or not yours' });
   await pool.query('UPDATE users SET pinned_post_id=$1 WHERE id=$2', [postId, req.user.id]);
   res.json({ ok: true, pinned_post_id: postId });
 });
 
+// DELETE /api/me/pin — unpin the currently pinned post
 app.delete('/api/me/pin', auth, async (req, res) => {
   await pool.query('UPDATE users SET pinned_post_id=NULL WHERE id=$1', [req.user.id]);
   res.json({ ok: true, pinned_post_id: null });
 });
 
+// GET /api/online/users — returns list of recently-seen users
 app.get('/api/online/users', auth, async (req, res) => {
   const now = Date.now();
   const users = [];
   for (const [id, data] of onlineMap) {
-    if (now - data.lastSeen < ONLINE_TIMEOUT_MS) users.push({ id, username: data.username, isMe: id === req.user.id });
-    else onlineMap.delete(id);
+    if (now - data.lastSeen < ONLINE_TIMEOUT_MS) {
+      users.push({ id, username: data.username, isMe: id === req.user.id });
+    } else {
+      onlineMap.delete(id);
+    }
   }
   users.sort((a, b) => a.username.localeCompare(b.username));
   res.json(users);
 });
 
-// ── MUSIC PLATFORM ───────────────────────────────────────────
-app.get('/api/music', auth, async (req, res) => {
-  const { rows } = await pool.query(`
-    SELECT m.*, u.username
-    FROM music m
-    JOIN users u ON u.id = m.user_id
-    ORDER BY m.id DESC LIMIT 100
-  `);
-  res.json(rows);
-});
-
-app.post('/api/music', auth, async (req, res) => {
-  const { title, composer, cover_url, audio_url } = req.body;
-  if (!title || !composer || !audio_url) return res.status(400).json({ error: 'Missing required fields' });
-  if (audio_url.length > 25 * 1024 * 1024) return res.status(400).json({ error: 'Audio file is too large.' });
-  try {
-    const { rows } = await pool.query(
-      `INSERT INTO music (user_id, title, composer, cover_url, audio_url)
-       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-      [req.user.id, title.slice(0, 150), composer.slice(0, 150), cover_url || '', audio_url]
-    );
-    res.json(rows[0]);
-  } catch(e) {
-    console.error(e);
-    res.status(500).json({ error: 'Failed to upload music' });
-  }
-});
-
 app.listen(process.env.PORT || 8080, () => {
   console.log('Listening on', process.env.PORT || 8080);
+  console.log('DB host:', connStr.replace(/\/\/.*@/, '//***@'));
 });
