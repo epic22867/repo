@@ -80,6 +80,14 @@ await pool.query(`
     content TEXT NOT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW()
   );
+
+  CREATE TABLE IF NOT EXISTS news (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    username TEXT NOT NULL,
+    content TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  );
 `);
 
 // In-memory rate limit tracker: userId -> array of post timestamps (ms)
@@ -98,7 +106,9 @@ const safeAlterQueries = [
   `ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT DEFAULT ''`,
   `ALTER TABLE posts ADD COLUMN IF NOT EXISTS media_url TEXT DEFAULT ''`,
   `ALTER TABLE posts ADD COLUMN IF NOT EXISTS media_type TEXT DEFAULT ''`,
-  `ALTER TABLE posts ADD COLUMN IF NOT EXISTS is_sticker BOOLEAN DEFAULT FALSE`
+  `ALTER TABLE posts ADD COLUMN IF NOT EXISTS is_sticker BOOLEAN DEFAULT FALSE`,
+  `ALTER TABLE users ADD COLUMN IF NOT EXISTS aero_points INTEGER DEFAULT 0`,
+  `ALTER TABLE users ADD COLUMN IF NOT EXISTS activity_count INTEGER DEFAULT 0`,
 ];
 
 for (const q of safeAlterQueries) {
@@ -322,9 +332,9 @@ app.post('/api/posts', auth, async (req, res) => {
   );
 
   res.json({ ...rows[0], username: req.user.username });
+  // Award activity point (fire-and-forget)
+  incrementActivity(req.user.id).catch(() => {});
 });
-
-// ── LIKES ────────────────────────────────────────────────────
 app.post('/api/posts/:id/like', auth, async (req, res) => {
   const postId = parseInt(req.params.id);
   const userId = req.user.id;
@@ -369,6 +379,8 @@ app.post('/api/posts/:id/comments', auth, async (req, res) => {
   );
   const u = userRows[0] || {};
   res.json({ ...rows[0], username: u.username || req.user.username, avatar_url: u.avatar_url || '', accent_color: u.accent_color || '#4da3ff' });
+  // Award activity point (fire-and-forget)
+  incrementActivity(req.user.id).catch(() => {});
 });
 
 app.delete('/api/comments/:id', auth, async (req, res) => {
@@ -566,6 +578,72 @@ app.get('/api/search', auth, async (req, res) => {
   );
 
   res.json(rows);
+});
+
+// ── AERO POINTS & NEWS ──────────────────────────────────────
+
+// Helper: increment activity count and award points if threshold reached
+async function incrementActivity(userId) {
+  const { rows } = await pool.query(
+    `UPDATE users
+     SET activity_count = activity_count + 1
+     WHERE id = $1
+     RETURNING activity_count, aero_points`,
+    [userId]
+  );
+  if (!rows[0]) return;
+  const { activity_count } = rows[0];
+  // Every 2 activities = 1 point
+  if (activity_count % 2 === 0) {
+    await pool.query(
+      `UPDATE users SET aero_points = aero_points + 1 WHERE id = $1`,
+      [userId]
+    );
+  }
+}
+
+// GET /api/me/points — returns current points
+app.get('/api/me/points', auth, async (req, res) => {
+  const { rows } = await pool.query(
+    'SELECT aero_points, activity_count FROM users WHERE id=$1',
+    [req.user.id]
+  );
+  res.json(rows[0] || { aero_points: 0, activity_count: 0 });
+});
+
+// GET /api/news — returns latest news items
+app.get('/api/news', auth, async (req, res) => {
+  const { rows } = await pool.query(
+    `SELECT id, username, content, created_at FROM news ORDER BY id DESC LIMIT 50`
+  );
+  res.json(rows);
+});
+
+// POST /api/news — spend 10 points to post a news message
+app.post('/api/news', auth, async (req, res) => {
+  const content = (req.body.content || '').trim().slice(0, 456);
+  if (!content) return res.status(400).json({ error: 'News content is empty' });
+
+  // Check points
+  const { rows: userRows } = await pool.query(
+    'SELECT aero_points, username FROM users WHERE id=$1',
+    [req.user.id]
+  );
+  const user = userRows[0];
+  if (!user || user.aero_points < 10) {
+    return res.status(403).json({ error: 'Not enough Aero-Points (need 10)' });
+  }
+
+  // Deduct points and insert news
+  await pool.query(
+    'UPDATE users SET aero_points = aero_points - 10 WHERE id=$1',
+    [req.user.id]
+  );
+  const { rows } = await pool.query(
+    `INSERT INTO news (user_id, username, content) VALUES ($1, $2, $3) RETURNING *`,
+    [req.user.id, user.username, content]
+  );
+  res.json(rows[0]);
 });
 
 app.listen(process.env.PORT || 8080, () => {
