@@ -13,6 +13,8 @@
       --glass-shadow:rgba(100,160,220,0.25);
       --aero-blue:#1e6bbf;--aero-blue2:#3a8ee6;
       --text-dark:#1a2a3a;--text-mid:#3a5070;--text-light:#5a7090;
+      --btn-top:rgba(255,255,255,0.95);--btn-bot:rgba(180,215,250,0.8);
+      --active-top:rgba(120,185,245,0.95);--active-bot:rgba(50,130,210,0.9);
     }
     body{
       font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;
@@ -20,7 +22,16 @@
       min-height:100vh;color:var(--text-dark);font-size:13px;
       background-attachment:fixed;
     }
+    /* Aero glass panel mixin */
+    .glass{
+      background:linear-gradient(180deg,rgba(255,255,255,0.55) 0%,rgba(200,230,255,0.3) 50%,rgba(160,210,250,0.4) 100%);
+      border:1px solid rgba(255,255,255,0.8);
+      border-bottom-color:rgba(150,200,240,0.6);
+      box-shadow:0 2px 12px rgba(80,140,200,0.18),inset 0 1px 0 rgba(255,255,255,0.9),inset 0 -1px 0 rgba(150,200,240,0.3);
+      backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+    }
     #app{max-width:540px;margin:0 auto;padding:0 0 80px}
+    /* Wider container when sidebar is shown */
     #app:has(.two-col-layout){max-width:760px}
 
     /* NAV */
@@ -115,6 +126,31 @@
     .btn-ghost{background:linear-gradient(180deg,rgba(255,255,255,0.5) 0%,rgba(220,235,250,0.35) 100%);color:var(--text-mid);border-color:rgba(150,195,235,0.5)}
     .err{color:#c0392b;font-size:11px;max-width:260px;text-align:center;background:rgba(255,220,220,0.5);border-radius:4px;padding:4px 8px}
 
+    /* CLICKABLE NOTIFICATION ITEMS */
+    .notif-item-clickable{cursor:pointer;transition:background .15s,box-shadow .15s}
+    .notif-item-clickable:hover{
+      background:linear-gradient(180deg,rgba(255,255,255,0.7) 0%,rgba(220,238,255,0.55) 100%);
+      box-shadow:0 2px 10px rgba(60,130,210,0.13);
+    }
+
+    /* TIMEOUT BANNER */
+    .timeout-banner{
+      margin:10px 12px 0;border-radius:10px;
+      background:linear-gradient(180deg,rgba(255,230,200,0.75) 0%,rgba(255,200,160,0.6) 100%);
+      border:1px solid rgba(240,160,80,0.6);border-bottom-color:rgba(200,120,40,0.4);
+      box-shadow:0 2px 10px rgba(200,120,40,0.15),inset 0 1px 0 rgba(255,255,255,0.8);
+      padding:12px 16px;display:flex;align-items:center;gap:10px;
+      animation:fadeUp .25s ease;
+    }
+    .timeout-icon{font-size:22px;line-height:1;flex-shrink:0}
+    .timeout-text{flex:1;min-width:0}
+    .timeout-text strong{display:block;font-size:12.5px;color:#7a3800;font-weight:700;margin-bottom:2px}
+    .timeout-text span{font-size:11px;color:#a05010}
+    .timeout-compose-block{
+      pointer-events:none;opacity:0.45;user-select:none;
+    }
+
+    /* COMPOSE */
     .compose{
       margin:12px 12px 0;border-radius:10px;
       background:linear-gradient(180deg,rgba(255,255,255,0.55) 0%,rgba(210,235,255,0.4) 100%);
@@ -141,7 +177,80 @@
     .post-media{margin-top:8px}
     .post-media img{max-width:100%;border-radius:8px;display:block;border:1px solid rgba(100,175,245,0.2)}
     .post-media video{max-width:100%;border-radius:8px;display:block;border:1px solid rgba(100,175,245,0.2)}
+    #media-err{font-size:11px;color:#d94f4f;margin-top:4px}
 
+    /* EMOJI & STICKER PICKER */
+    .picker-btn{
+      display:flex;align-items:center;gap:4px;padding:5px 9px;font-family:inherit;font-size:11px;
+      font-weight:600;cursor:pointer;border-radius:14px;color:#5a9fd4;white-space:nowrap;flex-shrink:0;
+      background:rgba(100,175,245,0.12);border:1px solid rgba(100,175,245,0.35);
+      transition:all .15s;
+    }
+    .picker-btn:hover{background:rgba(100,175,245,0.22)}
+    .picker-btn.active{background:rgba(100,175,245,0.28);border-color:rgba(60,140,220,0.55)}
+    .picker-popup{
+      position:fixed;
+      z-index:500;
+      width:300px;max-height:320px;
+      background:linear-gradient(180deg,rgba(240,250,255,0.97) 0%,rgba(215,235,255,0.96) 100%);
+      border:1px solid rgba(255,255,255,0.9);border-bottom-color:rgba(140,195,240,0.6);
+      border-radius:12px;
+      box-shadow:0 8px 32px rgba(60,130,210,0.22),inset 0 1px 0 rgba(255,255,255,1);
+      backdrop-filter:blur(16px);
+      display:flex;flex-direction:column;overflow:hidden;
+      animation:fadeUp .18s ease;
+    }
+    .picker-tabs{
+      display:flex;border-bottom:1px solid rgba(140,195,240,0.3);flex-shrink:0;
+    }
+    .picker-tab{
+      flex:1;padding:7px 4px;font-family:inherit;font-size:10.5px;font-weight:700;
+      letter-spacing:.07em;text-transform:uppercase;cursor:pointer;
+      background:none;border:none;color:var(--text-light);transition:all .15s;
+    }
+    .picker-tab.active{
+      color:var(--aero-blue);
+      background:linear-gradient(180deg,rgba(255,255,255,0.6) 0%,rgba(210,235,255,0.4) 100%);
+      box-shadow:inset 0 -2px 0 var(--aero-blue2);
+    }
+    .picker-body{overflow-y:auto;flex:1;padding:8px}
+    .picker-grid{
+      display:grid;grid-template-columns:repeat(auto-fill,minmax(44px,1fr));gap:4px;
+    }
+    .picker-item{
+      display:flex;align-items:center;justify-content:center;
+      border-radius:8px;padding:4px;cursor:pointer;
+      transition:background .12s,transform .1s;
+      border:1px solid transparent;
+      aspect-ratio:1;
+    }
+    .picker-item:hover{
+      background:rgba(100,175,245,0.18);border-color:rgba(100,175,245,0.35);
+      transform:scale(1.08);
+    }
+    .picker-item img{width:34px;height:34px;object-fit:contain;display:block;border-radius:4px}
+    .picker-sticker-grid{
+      display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:6px;
+    }
+    .picker-sticker-item{
+      display:flex;align-items:center;justify-content:center;
+      border-radius:10px;padding:5px;cursor:pointer;
+      transition:background .12s,transform .1s;
+      border:1px solid transparent;aspect-ratio:1;
+    }
+    .picker-sticker-item:hover{
+      background:rgba(100,175,245,0.18);border-color:rgba(100,175,245,0.35);
+      transform:scale(1.05);
+    }
+    .picker-sticker-item img{width:60px;height:60px;object-fit:contain;display:block;border-radius:6px}
+    .picker-loading{padding:24px;text-align:center;color:var(--text-light);font-size:11px}
+    .picker-empty{padding:24px;text-align:center;color:var(--text-light);font-size:11px}
+    /* inline emoji in posts */
+    .post-emoji{height:20px;width:20px;object-fit:contain;vertical-align:middle;display:inline-block;margin:0 1px}
+    /* sticker in posts */
+    .post-sticker{max-width:140px;max-height:140px;display:block;margin-top:6px;border-radius:10px}
+    .compose-footer-left{display:flex;gap:5px;align-items:center;overflow-x:auto;flex:1;min-width:0;scrollbar-width:none}
+    .compose-footer-left::-webkit-scrollbar{display:none}
     .post-btn{
       padding:6px 18px;font-family:inherit;font-size:11.5px;font-weight:600;cursor:pointer;border-radius:14px;flex-shrink:0;
       background:linear-gradient(180deg,rgba(100,175,245,0.95) 0%,rgba(60,140,225,0.9) 49%,rgba(40,120,210,0.95) 50%,rgba(80,160,240,0.9) 100%);
@@ -166,57 +275,330 @@
     .post-user:hover{color:var(--aero-blue2);text-decoration:underline}
     .post-time{font-size:10.5px;color:var(--text-light)}
     .post-content{line-height:1.65;color:var(--text-dark);white-space:pre-wrap;word-break:break-word}
+    .post-del{float:right;background:none;border:none;cursor:pointer;color:#aac8e0;font-size:17px;line-height:1;margin-left:8px;transition:color .15s}
+    .post-del:hover{color:#c0392b}
 
-    /* MUSIC SPECIFIC STYLES */
-    .music-track {
-      display: flex; align-items: center; gap: 12px;
-      padding: 10px 14px; margin: 8px 12px 0; border-radius: 10px;
-      background: linear-gradient(180deg, rgba(255,255,255,0.5) 0%, rgba(210,232,255,0.35) 100%);
-      border: 1px solid rgba(255,255,255,0.8); border-bottom-color: rgba(140,195,240,0.35);
-      box-shadow: 0 2px 10px rgba(80,150,220,0.08), inset 0 1px 0 rgba(255,255,255,0.9);
-      transition: background 0.15s, transform 0.1s; cursor: pointer;
+    /* PIN BUTTON & BADGE */
+    .post-pin{
+      float:right;background:none;border:none;cursor:pointer;
+      color:#aac8e0;font-size:15px;line-height:1;margin-left:4px;
+      transition:color .15s;
     }
-    .music-track:hover {
-      background: linear-gradient(180deg, rgba(255,255,255,0.7) 0%, rgba(220,240,255,0.5) 100%);
-      transform: translateY(-1px); box-shadow: 0 4px 12px rgba(80,150,220,0.15);
+    .post-pin:hover{color:#1e6bbf}
+    .post-pin.pinned{color:#f0a030}
+    .pinned-badge{
+      display:inline-flex;align-items:center;gap:4px;
+      font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+      color:#a07010;background:rgba(255,200,80,0.22);
+      border:1px solid rgba(220,160,30,0.35);border-radius:6px;
+      padding:2px 7px;margin-bottom:5px;
     }
-    .music-cover {
-      width: 44px; height: 44px; border-radius: 8px; flex-shrink: 0; object-fit: cover;
-      background: linear-gradient(135deg, #1e6bbf, #a0c4e8); border: 1px solid rgba(255,255,255,0.8);
-    }
-    .music-info { flex: 1; min-width: 0; }
-    .music-title { font-size: 13.5px; font-weight: 700; color: var(--text-dark); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px;}
-    .music-composer { font-size: 11px; color: var(--text-light); }
-    .music-play-btn {
-      background: linear-gradient(180deg,rgba(100,175,245,0.95) 0%,rgba(50,130,220,0.9) 100%);
-      color: #fff; border: 1px solid rgba(30,100,200,0.5); padding: 6px 12px; border-radius: 20px;
-      font-size: 11px; font-weight: 700; cursor: pointer; transition: 0.15s; flex-shrink: 0;
-    }
-    .music-play-btn:hover { box-shadow: 0 2px 8px rgba(30,100,200,0.3); transform: scale(1.05); }
 
-    /* GLOBAL MICRO PLAYER */
-    .micro-player {
-      position: fixed; bottom: 20px; right: 20px; z-index: 1000;
-      width: 280px; padding: 12px; border-radius: 14px;
-      background: linear-gradient(180deg, rgba(255,255,255,0.85) 0%, rgba(210,235,255,0.75) 100%);
-      border: 1px solid rgba(255,255,255,0.9); border-bottom-color: rgba(140,195,240,0.6);
-      box-shadow: 0 8px 32px rgba(60,130,210,0.25), inset 0 1px 0 rgba(255,255,255,1);
-      backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
-      display: flex; flex-direction: column; gap: 10px;
-      animation: fadeUp 0.3s ease forwards;
+    /* POST ACTIONS — like & comment */
+    .post-actions{
+      display:flex;align-items:center;gap:6px;margin-top:10px;
+      padding-top:8px;border-top:1px solid rgba(140,195,240,0.2);
     }
-    .mp-row { display: flex; align-items: center; gap: 10px; }
-    .mp-cover { width: 44px; height: 44px; border-radius: 6px; object-fit: cover; background: #5a9fd4; border: 1px solid rgba(255,255,255,0.8); }
-    .mp-info { flex: 1; min-width: 0; }
-    .mp-title { font-size: 12.5px; font-weight: 700; color: var(--text-dark); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px;}
-    .mp-composer { font-size: 10.5px; color: var(--text-light); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .mp-controls { display: flex; gap: 8px; align-items: center; }
-    .mp-btn { background: none; border: none; cursor: pointer; color: var(--aero-blue); font-size: 22px; line-height: 1; transition: transform 0.1s; display: flex; align-items: center; justify-content: center; }
-    .mp-btn:hover { transform: scale(1.1); color: var(--aero-blue2); }
-    .mp-btn.small { font-size: 16px; color: var(--text-light); }
-    .mp-btn.small:hover { color: #c0392b; }
-    .mp-progress-bar { height: 6px; background: rgba(100,175,245,0.2); border-radius: 3px; overflow: hidden; cursor: pointer; border: 1px solid rgba(255,255,255,0.5); }
-    .mp-progress { height: 100%; width: 0%; background: linear-gradient(90deg, #5a9fd4, #1e6bbf); transition: width 0.1s linear; }
+    .action-btn{
+      display:flex;align-items:center;gap:4px;
+      background:none;border:none;cursor:pointer;font-family:inherit;
+      font-size:11.5px;font-weight:600;color:var(--text-light);
+      padding:4px 8px;border-radius:10px;transition:all .15s;
+    }
+    .action-btn:hover{background:rgba(100,175,245,0.12);color:var(--aero-blue)}
+    .action-btn.liked{color:#e05080;}
+    .action-btn.liked:hover{background:rgba(220,80,120,0.1);color:#c03060}
+    .like-heart{font-size:14px;transition:transform .18s;}
+    .action-btn.liked .like-heart{animation:heartPop .25s ease;}
+    @keyframes heartPop{0%{transform:scale(1)}50%{transform:scale(1.45)}100%{transform:scale(1)}}
+    .action-count{font-size:11px;min-width:10px}
+
+    /* COMMENTS SECTION */
+    .comments-section{
+      margin-top:8px;padding-top:8px;
+      border-top:1px solid rgba(140,195,240,0.18);
+      animation:fadeUp .18s ease;
+    }
+    .comment{
+      display:flex;gap:8px;margin-bottom:7px;align-items:flex-start;
+    }
+    .comment-avatar{
+      width:24px;height:24px;border-radius:50%;flex-shrink:0;
+      background:linear-gradient(135deg,rgba(120,185,245,0.9),rgba(50,130,220,0.85));
+      border:1px solid rgba(255,255,255,0.8);
+      display:flex;align-items:center;justify-content:center;
+      font-size:10px;font-weight:700;color:#fff;overflow:hidden;
+    }
+    .comment-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+    .comment-body{flex:1;min-width:0;}
+    .comment-meta{display:flex;align-items:baseline;gap:6px;margin-bottom:2px}
+    .comment-user{
+      font-size:11.5px;font-weight:700;color:var(--aero-blue);cursor:pointer;
+    }
+    .comment-user:hover{text-decoration:underline}
+    .comment-time{font-size:10px;color:var(--text-light)}
+    .comment-text{font-size:12px;color:var(--text-dark);line-height:1.5;word-break:break-word;white-space:pre-wrap}
+    .comment-del{
+      background:none;border:none;cursor:pointer;color:#c0d8e8;font-size:13px;
+      padding:0 2px;line-height:1;transition:color .12s;margin-left:4px;flex-shrink:0;
+    }
+    .comment-del:hover{color:#c0392b}
+    .comment-input-row{
+      display:flex;gap:6px;margin-top:6px;align-items:center;
+    }
+    .comment-input{
+      flex:1;padding:6px 10px;font-family:inherit;font-size:12px;border-radius:14px;
+      background:rgba(220,238,255,0.5);border:1px solid rgba(140,195,240,0.5);
+      color:var(--text-dark);outline:none;max-width:100%;width:100%;
+      transition:border .12s,box-shadow .12s;
+    }
+    .comment-input:focus{border-color:rgba(60,140,220,0.7);box-shadow:0 0 0 2px rgba(80,160,240,0.14)}
+    .comment-submit{
+      padding:6px 12px;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;
+      border-radius:14px;border:1px solid rgba(30,100,200,0.4);color:#fff;
+      background:linear-gradient(180deg,rgba(100,175,245,0.95) 0%,rgba(50,130,220,0.9) 100%);
+      transition:all .12s;white-space:nowrap;flex-shrink:0;
+    }
+    .comment-submit:hover{box-shadow:0 2px 8px rgba(30,100,200,0.3)}
+    .comments-load-more{
+      font-size:11px;color:var(--aero-blue);cursor:pointer;background:none;border:none;
+      font-family:inherit;padding:2px 0;font-weight:600;
+    }
+    .comments-load-more:hover{text-decoration:underline}
+/* PROFILE — two-column layout */
+.profile-layout{
+  display:flex;flex-direction:row;align-items:flex-start;
+  gap:10px;margin:12px 12px 0;
+}
+/* LEFT COLUMN — userbars */
+.profile-left-col{
+  flex-shrink:0;
+  display:flex;flex-direction:column;gap:3px;
+  padding:8px 6px;
+  background:none;
+  border-radius:8px;
+  border:none;
+  box-shadow:none;
+  min-width:32px;
+}
+.profile-left-col:empty{display:none}
+/* CENTER COLUMN — holds the card centered */
+.profile-center-col{
+  flex:1;display:flex;justify-content:center;
+}
+/* PROFILE CARD */
+.profile-page{
+  width:100%;max-width:360px;
+  border-radius:14px;overflow:hidden;
+  background:linear-gradient(180deg,color-mix(in srgb,var(--profile-accent,#5a9fd4) 28%,rgba(255,255,255,0.85)) 0%,color-mix(in srgb,var(--profile-accent,#5a9fd4) 18%,rgba(210,235,255,0.7)) 100%);
+  border:1px solid rgba(255,255,255,0.85);border-bottom-color:rgba(140,195,240,0.4);
+  box-shadow:0 6px 24px rgba(80,150,220,0.16),inset 0 1px 0 rgba(255,255,255,0.95);
+}
+.profile-hero{overflow:hidden;display:flex;flex-direction:column;align-items:center}
+/* legacy userbars wrapper — hidden, replaced by left col */
+.profile-userbars{display:none}
+.profile-userbars:empty{display:none}
+.profile-userbar{
+  display:block;line-height:0;border-radius:2px;overflow:hidden;
+  box-shadow:0 1px 3px rgba(0,0,0,0.4);
+  transition:opacity .15s,transform .1s,box-shadow .15s;
+}
+.profile-userbar:hover{opacity:.82;transform:translateX(1px);box-shadow:0 2px 6px rgba(0,0,0,0.5)}
+.profile-userbar img{display:block;width:100%;height:auto;max-width:100%}
+.profile-userbars-list{
+  display:flex;flex-direction:column;gap:4px;
+  margin:8px 12px 0;
+}
+/* no-link variant */
+div.profile-userbar{cursor:default}
+.profile-body{
+  flex:1;min-width:0;
+  padding:20px 18px 18px;position:relative;
+  display:flex;flex-direction:column;align-items:center;text-align:center;
+  background:linear-gradient(180deg,rgba(255,255,255,0.22) 0%,rgba(255,255,255,0.0) 100%);
+}
+.profile-avatar{
+  width:64px;height:64px;border-radius:50%;
+  margin-bottom:10px;position:relative;z-index:1;
+  background:linear-gradient(135deg,var(--profile-accent, rgba(120,185,245,0.9)),rgba(50,130,220,0.85));
+  border:2px solid rgba(255,255,255,0.95);
+  box-shadow:0 2px 14px rgba(60,130,210,0.3),inset 0 1px 0 rgba(255,255,255,0.6);
+  display:flex;align-items:center;justify-content:center;font-size:24px;color:#fff;font-weight:700;
+}
+.profile-name{font-size:18px;font-weight:700;color:var(--text-dark);margin-bottom:2px}
+.profile-bio{color:var(--text-light);font-size:12px;font-style:italic;margin:5px 0 4px}
+.profile-stats{display:flex;gap:18px;margin-top:12px;flex-wrap:wrap;justify-content:center}
+.stat{font-size:11px;color:var(--text-light)}
+.stat strong{color:var(--text-dark);font-weight:700;display:block;font-size:15px}
+.profile-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;justify-content:center}
+.follow-btn{
+  margin-top:0;padding:6px 18px;font-size:11.5px;font-weight:600;font-family:inherit;cursor:pointer;
+  border-radius:14px;letter-spacing:.04em;transition:all .15s;
+}
+.following-btn{
+  background:linear-gradient(180deg,rgba(100,175,245,0.95) 0%,rgba(50,130,220,0.9) 50%,rgba(80,155,235,0.9) 100%);
+  color:#fff;border:1px solid rgba(30,100,200,0.5);
+  box-shadow:0 2px 8px rgba(30,100,200,0.3),inset 0 1px 0 rgba(255,255,255,0.35);
+}
+.unfollowing-btn{
+  background:linear-gradient(180deg,rgba(255,255,255,0.9) 0%,rgba(210,235,255,0.8) 100%);
+  color:var(--aero-blue);border:1px solid rgba(120,180,240,0.6);
+  box-shadow:0 2px 6px rgba(80,140,200,0.15),inset 0 1px 0 rgba(255,255,255,0.95);
+}
+.profile-custom-grid{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:10px;margin-top:14px;
+}
+.profile-widget{
+  display:block;overflow:hidden;border-radius:12px;text-decoration:none;color:inherit;
+  background:linear-gradient(180deg,rgba(255,255,255,0.7) 0%,rgba(220,238,255,0.45) 100%);
+  border:1px solid rgba(255,255,255,0.8);border-bottom-color:rgba(140,195,240,0.35);
+  box-shadow:0 2px 10px rgba(80,150,220,0.08),inset 0 1px 0 rgba(255,255,255,0.9);
+  transition:transform .15s,box-shadow .15s,background .15s;
+}
+.profile-widget:hover{
+  transform:translateY(-1px);
+  box-shadow:0 4px 14px rgba(80,150,220,0.16),inset 0 1px 0 rgba(255,255,255,0.95);
+}
+.profile-widget-image{
+  width:100%;height:84px;display:block;background-size:cover;background-position:center center;
+  background:linear-gradient(135deg,rgba(120,185,245,0.95),rgba(50,130,220,0.85));
+}
+.profile-widget-title{
+  padding:7px 8px;font-size:10.5px;font-weight:700;line-height:1.25;color:var(--text-dark);
+  word-break:break-word;
+}
+.profile-widget-link{
+  padding:0 8px 8px;font-size:10px;color:var(--text-light);word-break:break-word;
+}
+.profile-post-shell{padding-bottom:4px;margin:0 12px}
+.profile-post-shell .post{margin-top:8px;margin-left:0;margin-right:0}
+.tab-bar{
+  display:flex;margin:8px 12px 0;border-radius:8px;overflow:hidden;
+  border:1px solid rgba(255,255,255,0.7);border-bottom-color:rgba(140,195,240,0.4);
+  background:rgba(200,225,250,0.3);
+}
+.tab{
+  flex:1;padding:9px;text-align:center;background:none;border:none;cursor:pointer;
+  font-family:inherit;font-size:11px;letter-spacing:.06em;font-weight:600;color:var(--text-light);
+  transition:all .15s;
+}
+.tab.active{
+  background:linear-gradient(180deg,rgba(255,255,255,0.7) 0%,rgba(210,235,255,0.55) 100%);
+  color:var(--aero-blue);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,0.9);
+}
+
+/* PROFILE EDITOR */
+.profile-editor .settings-divider{margin:18px 0}
+.editor-label{
+  display:block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--text-light);margin:4px 0 6px 2px;font-weight:700;
+}
+.profile-editor-grid{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;
+  margin-bottom:10px;
+}
+.profile-editor-grid input,
+.profile-editor-grid textarea,
+.widget-slot input{
+  width:100%;max-width:100%;
+}
+.widget-editor{
+  display:grid;gap:10px;margin-top:8px;
+}
+.widget-slot{
+  border-radius:10px;padding:10px;
+  background:linear-gradient(180deg,rgba(255,255,255,0.45) 0%,rgba(210,235,255,0.28) 100%);
+  border:1px solid rgba(255,255,255,0.8);border-bottom-color:rgba(140,195,240,0.3);
+  box-shadow:0 2px 8px rgba(80,150,220,0.07),inset 0 1px 0 rgba(255,255,255,0.85);
+}
+.userbar-editor{display:grid;gap:8px;margin-top:8px}
+.userbar-slot{
+  border-radius:8px;padding:8px 10px;
+  background:linear-gradient(180deg,rgba(255,255,255,0.45) 0%,rgba(210,235,255,0.28) 100%);
+  border:1px solid rgba(255,255,255,0.8);border-bottom-color:rgba(140,195,240,0.3);
+  box-shadow:0 2px 8px rgba(80,150,220,0.07),inset 0 1px 0 rgba(255,255,255,0.85);
+}
+.userbar-slot-label{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-light);font-weight:700;margin-bottom:6px}
+.userbar-slot-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.userbar-preview{margin-top:6px;min-height:36px}
+.userbar-preview img{height:36px;display:block;border-radius:2px}
+.widget-slot-grid{
+  display:grid;grid-template-columns:1fr 1fr;gap:8px;
+}
+.widget-slot-grid .full{grid-column:1/-1}
+.save-note{
+  font-size:10.5px;color:var(--text-light);margin-top:8px;
+}
+
+    /* EXPLORE */
+    .search-bar{margin:12px 12px 0;border-radius:10px;
+      background:linear-gradient(180deg,rgba(255,255,255,0.5) 0%,rgba(210,232,255,0.35) 100%);
+      border:1px solid rgba(255,255,255,0.8);padding:10px 14px;
+      box-shadow:0 2px 10px rgba(80,150,220,0.08),inset 0 1px 0 rgba(255,255,255,0.9);}
+    .search-bar input{max-width:100%;margin:0;border-radius:5px}
+    .user-row{
+      display:flex;align-items:center;justify-content:space-between;
+      padding:11px 16px;margin:8px 12px 0;border-radius:10px;cursor:pointer;
+      background:linear-gradient(180deg,rgba(255,255,255,0.45) 0%,rgba(205,230,255,0.3) 100%);
+      border:1px solid rgba(255,255,255,0.75);border-bottom-color:rgba(140,195,240,0.3);
+      box-shadow:0 2px 8px rgba(80,150,220,0.07),inset 0 1px 0 rgba(255,255,255,0.85);
+      transition:all .15s;
+    }
+    .user-row:hover{background:linear-gradient(180deg,rgba(255,255,255,0.65) 0%,rgba(220,240,255,0.5) 100%);box-shadow:0 4px 14px rgba(80,150,220,0.15)}
+    .user-name{font-weight:700;color:var(--text-dark)}
+    .user-bio{font-size:11px;color:var(--text-light)}
+    .empty{padding:40px 20px;text-align:center;color:var(--text-light);font-size:12px}
+
+    /* SETTINGS */
+    .settings{padding:16px 12px}
+    .settings-panel{
+      border-radius:10px;padding:20px;
+      background:linear-gradient(180deg,rgba(255,255,255,0.55) 0%,rgba(210,235,255,0.4) 100%);
+      border:1px solid rgba(255,255,255,0.85);border-bottom-color:rgba(140,195,240,0.4);
+      box-shadow:0 4px 16px rgba(80,150,220,0.1),inset 0 1px 0 rgba(255,255,255,0.95);
+    }
+    .settings h2{font-size:11px;letter-spacing:.14em;color:var(--text-light);margin-bottom:14px;font-weight:600;text-transform:uppercase}
+    .settings input,.settings textarea{max-width:100%;margin-bottom:10px;width:100%;padding:9px 12px;border-radius:5px;display:block}
+    .settings textarea{min-height:64px;resize:none}
+    .settings .btn{max-width:140px}
+    .settings-divider{border:none;border-top:1px solid rgba(140,190,230,0.3);margin:18px 0}
+
+    /* BOTTOM NAV */
+    .bottom-nav{
+      position:fixed;bottom:0;left:0;right:0;
+      background:linear-gradient(180deg,rgba(180,220,255,0.75) 0%,rgba(145,195,245,0.7) 50%,rgba(110,168,232,0.75) 100%);
+      border-top:1px solid rgba(255,255,255,0.7);
+      box-shadow:0 -2px 16px rgba(60,130,210,0.2),inset 0 1px 0 rgba(255,255,255,0.9);
+      backdrop-filter:blur(14px);
+      display:flex;justify-content:center;gap:0;
+    }
+    .bnav-btn{
+      background:none;border:none;cursor:pointer;font-family:inherit;font-size:11px;
+      letter-spacing:.06em;font-weight:600;color:rgba(30,80,140,0.6);padding:13px 30px;transition:color .15s;
+    }
+    .bnav-btn.active{color:var(--text-dark)}
+
+    /* HEADER STRIPE */
+    .content-header{
+      margin:12px 12px 0;border-radius:10px 10px 0 0;padding:8px 16px;
+      background:linear-gradient(180deg,rgba(100,175,245,0.25) 0%,rgba(60,140,225,0.15) 100%);
+      border:1px solid rgba(255,255,255,0.6);border-bottom:none;
+      font-size:10.5px;letter-spacing:.1em;font-weight:600;color:var(--text-light);text-transform:uppercase;
+    }
+
+    /* WATERMARK glow orbs */
+    body::before{
+      content:'';position:fixed;top:-120px;right:-80px;width:420px;height:420px;
+      background:radial-gradient(circle,rgba(140,200,255,0.35) 0%,transparent 70%);
+      pointer-events:none;z-index:0;
+    }
+    body::after{
+      content:'';position:fixed;bottom:-100px;left:-60px;width:320px;height:320px;
+      background:radial-gradient(circle,rgba(160,215,255,0.3) 0%,transparent 70%);
+      pointer-events:none;z-index:0;
+    }
+    #app{position:relative;z-index:1}
 
     /* TWO-COLUMN LAYOUT */
     .two-col-layout{
@@ -224,24 +606,236 @@
       padding-top:66px;
     }
     .news-sidebar{
-      width:170px;flex-shrink:0; position:sticky;top:66px;max-height:calc(100vh - 72px);overflow-y:auto; padding:10px 0 80px 10px; scrollbar-width:none;
+      width:170px;flex-shrink:0;
+      position:sticky;top:66px;max-height:calc(100vh - 72px);overflow-y:auto;
+      padding:10px 0 80px 10px;
+      scrollbar-width:none;
     }
+    .news-sidebar::-webkit-scrollbar{display:none}
     .main-col{flex:1;min-width:0}
+    .news-sidebar-loading{font-size:11px;color:var(--text-light);padding:12px 10px}
+
+    /* SIDEBAR NEWS PANEL */
+    .snews-wrap{
+      border-radius:10px;overflow:hidden;
+      background:linear-gradient(180deg,rgba(255,255,255,0.55) 0%,rgba(210,235,255,0.4) 100%);
+      border:1px solid rgba(255,255,255,0.85);border-bottom-color:rgba(140,195,240,0.4);
+      box-shadow:0 4px 16px rgba(80,150,220,0.12),inset 0 1px 0 rgba(255,255,255,0.95);
+      margin-bottom:8px;
+    }
+    .snews-header{
+      display:flex;align-items:center;gap:5px;padding:7px 10px;
+      background:linear-gradient(180deg,rgba(100,175,245,0.2) 0%,rgba(60,140,225,0.1) 100%);
+      border-bottom:1px solid rgba(140,195,240,0.25);
+    }
+    .snews-title{font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;font-weight:700;color:var(--text-light)}
+    .snews-count{font-size:9px;color:var(--aero-blue);font-weight:700;margin-left:auto}
+    .snews-body{padding:10px;min-height:50px}
+    .snews-item{animation:newsFade .35s ease}
+    @keyframes newsFade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+    .snews-item-user{font-size:10px;font-weight:700;color:var(--aero-blue);margin-bottom:2px;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .snews-item-user:hover{text-decoration:underline}
+    .snews-item-text{font-size:11.5px;color:var(--text-dark);line-height:1.55;word-break:break-word;white-space:pre-wrap}
+    .snews-item-time{font-size:9.5px;color:var(--text-light);margin-top:4px}
+    .snews-dots{display:flex;gap:4px;margin-top:8px;justify-content:center;flex-wrap:wrap}
+    .snews-dot{
+      width:6px;height:6px;border-radius:50%;cursor:pointer;
+      background:rgba(120,185,245,0.35);border:1px solid rgba(100,175,245,0.4);
+      transition:background .2s;flex-shrink:0;
+    }
+    .snews-dot.active{background:var(--aero-blue2);border-color:var(--aero-blue)}
+    .snews-empty{padding:12px 10px;font-size:11px;color:var(--text-light);text-align:center}
+
+    /* SIDEBAR POINTS */
+    .snews-points{
+      border-radius:10px;
+      background:linear-gradient(180deg,rgba(255,255,255,0.5) 0%,rgba(210,235,255,0.35) 100%);
+      border:1px solid rgba(255,255,255,0.8);border-bottom-color:rgba(140,195,240,0.35);
+      box-shadow:0 2px 8px rgba(80,150,220,0.08),inset 0 1px 0 rgba(255,255,255,0.9);
+      padding:9px 10px;margin-bottom:8px;
+    }
+    .snews-points-label{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-light);font-weight:700;margin-bottom:2px}
+    .snews-points-val{
+      font-size:18px;font-weight:700;
+      background:linear-gradient(180deg,#4da8ff 0%,#1e6bbf 100%);
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+    }
+    .snews-points-hint{font-size:9.5px;color:var(--text-light);margin-top:1px;line-height:1.4}
+
+    /* SIDEBAR COMPOSE */
+    .snews-compose{
+      border-radius:10px;
+      background:linear-gradient(180deg,rgba(255,255,255,0.5) 0%,rgba(210,235,255,0.35) 100%);
+      border:1px solid rgba(255,255,255,0.8);border-bottom-color:rgba(140,195,240,0.35);
+      box-shadow:0 2px 8px rgba(80,150,220,0.08),inset 0 1px 0 rgba(255,255,255,0.9);
+      padding:9px 10px;margin-bottom:8px;
+    }
+    .snews-compose-label{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-light);font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:4px}
+    .snews-compose-cost{
+      padding:1px 5px;font-size:9px;font-weight:700;color:var(--aero-blue);
+      background:rgba(100,175,245,0.18);border:1px solid rgba(100,175,245,0.35);border-radius:6px;
+    }
+    .snews-compose textarea{
+      width:100%;min-height:52px;resize:vertical;
+      background:rgba(220,238,255,0.45);border:1px solid rgba(140,195,240,0.5);
+      border-radius:5px;padding:6px 8px;font-family:inherit;font-size:11.5px;
+      color:var(--text-dark);outline:none;max-width:100%;line-height:1.5;
+      transition:border .12s;
+    }
+    .snews-compose textarea:focus{border-color:rgba(60,140,220,0.65)}
+    .snews-compose-footer{display:flex;justify-content:space-between;align-items:center;margin-top:5px}
+    .snews-char{font-size:9.5px;color:var(--text-light)}
+    .snews-char.warn{color:#d07020}
+    .snews-send-btn{
+      padding:4px 10px;font-family:inherit;font-size:10px;font-weight:700;cursor:pointer;
+      border-radius:10px;border:1px solid rgba(30,100,200,0.45);color:#fff;
+      background:linear-gradient(180deg,rgba(100,175,245,0.95) 0%,rgba(50,130,220,0.9) 100%);
+      transition:all .12s;white-space:nowrap;
+    }
+    .snews-send-btn:hover{box-shadow:0 2px 6px rgba(30,100,200,0.3)}
+    .snews-send-btn:disabled{opacity:.55;cursor:default}
+    .snews-err{font-size:10px;color:#c0392b;margin-top:4px}
+
+    /* ONLINE PANEL */
+    .online-panel{
+      border-radius:10px;
+      background:linear-gradient(180deg,rgba(255,255,255,0.55) 0%,rgba(210,235,255,0.4) 100%);
+      border:1px solid rgba(255,255,255,0.85);border-bottom-color:rgba(140,195,240,0.4);
+      box-shadow:0 4px 16px rgba(80,150,220,0.12),inset 0 1px 0 rgba(255,255,255,0.95);
+      margin-bottom:8px;overflow:hidden;
+    }
+    .online-header{
+      display:flex;align-items:center;gap:5px;padding:7px 10px;
+      background:linear-gradient(180deg,rgba(100,175,245,0.2) 0%,rgba(60,140,225,0.1) 100%);
+      border-bottom:1px solid rgba(140,195,240,0.25);
+    }
+    .online-title{font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;font-weight:700;color:var(--text-light)}
+    .online-count{
+      font-size:9px;font-weight:700;margin-left:auto;
+      background:rgba(60,200,100,0.18);border:1px solid rgba(60,200,100,0.4);
+      color:#1a8a40;border-radius:8px;padding:1px 5px;
+    }
+    .online-body{padding:8px 10px;min-height:36px}
+    .online-user{
+      display:flex;align-items:center;gap:6px;
+      padding:3px 0;cursor:pointer;border-radius:6px;
+      transition:background .12s;
+    }
+    .online-user:hover{background:rgba(100,175,245,0.12);padding-left:4px;margin-left:-4px}
+    .online-dot{
+      width:7px;height:7px;border-radius:50%;flex-shrink:0;
+      background:radial-gradient(circle at 35% 35%,#6ef0a0,#22c55e);
+      box-shadow:0 0 4px rgba(34,197,94,0.6);
+    }
+    .online-dot.me{background:radial-gradient(circle at 35% 35%,#80d0ff,#3a8ee6);box-shadow:0 0 4px rgba(58,142,230,0.6)}
+    .online-name{font-size:11px;color:var(--text-dark);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .online-name.me{color:var(--aero-blue)}
+    .online-empty{font-size:11px;color:var(--text-light);text-align:center;padding:8px 0}
 
     @media(max-width:620px){
       #app:has(.two-col-layout){max-width:540px}
       .two-col-layout{flex-direction:column}
       .news-sidebar{width:100%;position:static;max-height:none;padding:10px 10px 0}
       .main-col{width:100%}
-      .micro-player { bottom: 10px; right: 10px; left: 10px; width: auto; }
     }
-    .empty{padding:40px 20px;text-align:center;color:var(--text-light);font-size:12px}
+
+    /* AERO POINTS BADGE (kept for backward compat, hidden) */
+    .aero-points-bar{display:none}
+      margin:12px 12px 0;border-radius:10px;
+      background:linear-gradient(180deg,rgba(255,255,255,0.55) 0%,rgba(200,235,255,0.4) 100%);
+      border:1px solid rgba(255,255,255,0.85);border-bottom-color:rgba(140,195,240,0.4);
+      box-shadow:0 2px 10px rgba(80,150,220,0.1),inset 0 1px 0 rgba(255,255,255,0.95);
+      padding:12px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+    }
+    /* NOTIFICATIONS */
+    .notif-list{padding:12px 12px 0}
+    .notif-item{
+      display:flex;align-items:flex-start;gap:10px;
+      padding:12px 14px;margin-bottom:6px;border-radius:10px;
+      background:linear-gradient(180deg,rgba(255,255,255,0.5) 0%,rgba(210,232,255,0.35) 100%);
+      border:1px solid rgba(255,255,255,0.8);border-bottom-color:rgba(140,195,240,0.35);
+      box-shadow:0 2px 10px rgba(80,150,220,0.08),inset 0 1px 0 rgba(255,255,255,0.9);
+      animation:fadeUp .25s ease;transition:background .15s;
+    }
+    .notif-item.unread{
+      background:linear-gradient(180deg,rgba(220,238,255,0.65) 0%,rgba(185,220,255,0.5) 100%);
+      border-color:rgba(100,175,245,0.45);
+    }
+    .notif-icon{font-size:20px;flex-shrink:0;margin-top:1px}
+    .notif-body{flex:1;min-width:0}
+    .notif-text{font-size:12.5px;color:var(--text-dark);line-height:1.5;word-break:break-word}
+    .notif-text strong{color:var(--aero-blue);cursor:pointer}
+    .notif-text strong:hover{text-decoration:underline}
+    .notif-time{font-size:10.5px;color:var(--text-light);margin-top:2px}
+    .notif-unread-dot{
+      width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:5px;
+      background:radial-gradient(circle at 35% 35%,#80d0ff,#3a8ee6);
+      box-shadow:0 0 4px rgba(58,142,230,0.5);
+    }
+    .notif-empty{padding:40px 20px;text-align:center;color:var(--text-light);font-size:12px}
+    .notif-header{
+      display:flex;align-items:center;justify-content:space-between;
+      margin:12px 12px 0;padding:8px 14px;border-radius:10px;
+      background:linear-gradient(180deg,rgba(100,175,245,0.2) 0%,rgba(60,140,225,0.1) 100%);
+      border:1px solid rgba(255,255,255,0.7);border-bottom-color:rgba(140,195,240,0.3);
+    }
+    .notif-header-title{font-size:10.5px;letter-spacing:.1em;font-weight:700;color:var(--text-light);text-transform:uppercase}
+    .notif-mark-read{
+      font-size:10px;font-weight:600;color:var(--aero-blue);background:none;border:none;
+      cursor:pointer;font-family:inherit;padding:2px 6px;border-radius:6px;
+      transition:background .12s;
+    }
+    .notif-mark-read:hover{background:rgba(100,175,245,0.18)}
+    /* NOTIFICATION TOAST POPUP */
+    #notif-toast-container{
+      position:fixed;top:60px;right:12px;z-index:9999;
+      display:flex;flex-direction:column;gap:8px;pointer-events:none;
+    }
+    .notif-toast{
+      pointer-events:all;
+      display:flex;align-items:center;gap:10px;
+      padding:11px 14px;border-radius:12px;min-width:220px;max-width:300px;
+      background:linear-gradient(180deg,rgba(255,255,255,0.96) 0%,rgba(210,235,255,0.92) 100%);
+      border:1px solid rgba(100,175,245,0.6);border-bottom-color:rgba(60,140,220,0.4);
+      box-shadow:0 6px 24px rgba(60,130,210,0.28),inset 0 1px 0 rgba(255,255,255,1);
+      backdrop-filter:blur(16px);
+      animation:toastIn .3s cubic-bezier(.2,.8,.3,1) forwards;
+      cursor:pointer;
+    }
+    .notif-toast.dismissing{
+      animation:toastOut .35s ease forwards;
+    }
+    @keyframes toastIn{
+      from{opacity:0;transform:translateX(60px) scale(.94)}
+      to{opacity:1;transform:translateX(0) scale(1)}
+    }
+    @keyframes toastOut{
+      from{opacity:1;transform:translateX(0) scale(1);max-height:80px;margin-bottom:0}
+      to{opacity:0;transform:translateX(60px) scale(.94);max-height:0;margin-bottom:-8px;padding-top:0;padding-bottom:0}
+    }
+    .notif-toast-icon{font-size:22px;flex-shrink:0}
+    .notif-toast-body{flex:1;min-width:0}
+    .notif-toast-text{font-size:12px;color:var(--text-dark);line-height:1.45;word-break:break-word}
+    .notif-toast-text strong{color:var(--aero-blue)}
+    .notif-toast-sub{font-size:10.5px;color:var(--text-light);margin-top:2px}
+    .notif-toast-progress{
+      position:absolute;bottom:0;left:0;height:3px;border-radius:0 0 12px 12px;
+      background:linear-gradient(90deg,rgba(60,140,225,0.7),rgba(100,175,245,0.5));
+      animation:toastProgress 6s linear forwards;
+      width:100%;
+    }
+    .notif-toast{position:relative;overflow:hidden}
+    @keyframes toastProgress{from{width:100%}to{width:0%}}
+    .notif-toast-close{
+      font-size:14px;color:#aac8e0;background:none;border:none;cursor:pointer;
+      padding:0 0 0 4px;line-height:1;flex-shrink:0;transition:color .12s;
+    }
+    .notif-toast-close:hover{color:#5a9fd4}
   </style>
 </head>
 <body>
 <div id="app"></div>
 <div id="notif-toast-container"></div>
-<div id="global-music-player"></div>
 
 <script>
 const GITHUB_USER = 'epic22867';
@@ -254,73 +848,6 @@ let token = localStorage.getItem('token');
 const _rawMe = localStorage.getItem('me');
 let me = (_rawMe && _rawMe !== 'undefined') ? JSON.parse(_rawMe) : null;
 let view = 'feed', profileUser = null;
-
-// Global Audio Logic
-let globalAudio = new Audio();
-let musicList = [];
-let currentTrack = null;
-
-globalAudio.addEventListener('timeupdate', () => {
-  const p = document.getElementById('mp-progress');
-  if (p && globalAudio.duration) {
-    p.style.width = (globalAudio.currentTime / globalAudio.duration * 100) + '%';
-  }
-});
-
-globalAudio.addEventListener('ended', () => {
-  document.getElementById('mp-play-btn').textContent = '▶️';
-});
-
-globalAudio.addEventListener('play', () => {
-  const btn = document.getElementById('mp-play-btn');
-  if (btn) btn.textContent = '⏸';
-});
-
-globalAudio.addEventListener('pause', () => {
-  const btn = document.getElementById('mp-play-btn');
-  if (btn) btn.textContent = '▶️';
-});
-
-function toggleGlobalAudio() {
-  if (globalAudio.paused && currentTrack) globalAudio.play();
-  else globalAudio.pause();
-}
-
-function closeMicroPlayer() {
-  globalAudio.pause();
-  document.getElementById('micro-player').style.display = 'none';
-}
-
-function playTrack(id) {
-  const track = musicList.find(t => t.id === id);
-  if (!track) return;
-  currentTrack = track;
-  globalAudio.src = track.audio_url;
-  globalAudio.play();
-  
-  const player = document.getElementById('micro-player');
-  player.style.display = 'flex';
-  document.getElementById('mp-title').textContent = track.title;
-  document.getElementById('mp-composer').textContent = track.composer;
-  document.getElementById('mp-cover').src = track.cover_url || LOGO_URL;
-}
-
-// Render persistent micro player
-document.getElementById('global-music-player').innerHTML = `
-  <div id="micro-player" class="micro-player" style="display:none">
-    <div class="mp-row">
-      <img id="mp-cover" class="mp-cover" src="">
-      <div class="mp-info">
-        <div id="mp-title" class="mp-title"></div>
-        <div id="mp-composer" class="mp-composer"></div>
-      </div>
-      <div class="mp-controls">
-        <button id="mp-play-btn" class="mp-btn" onclick="toggleGlobalAudio()">▶️</button>
-        <button class="mp-btn small" onclick="closeMicroPlayer()">✖</button>
-      </div>
-    </div>
-    <div class="mp-progress-bar"><div id="mp-progress" class="mp-progress"></div></div>
-  </div>`;
 
 async function api(method, path, body) {
   const r = await fetch(path, {
@@ -341,16 +868,74 @@ function timeAgo(d) {
 
 function escHtml(s) {
   if (s === null || s === undefined) return '';
-  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function normalizeUserbars(input) {
+  let ubs = input;
+  if (typeof ubs === 'string') {
+    try { ubs = JSON.parse(ubs); } catch { ubs = []; }
+  }
+  if (!Array.isArray(ubs)) return [];
+  return ubs.map(u => ({
+    img: String(u?.img || '').trim(),
+    href: String(u?.href || '').trim(),
+  })).filter(u => u.img).slice(0, 8);
+}
+
+function previewUserbar(i) {
+  const img = document.getElementById(`ub${i}-img`)?.value.trim();
+  const preview = document.getElementById(`ub${i}-preview`);
+  if (!preview) return;
+  preview.innerHTML = img ? `<img src="${escHtml(img)}" alt="preview">` : '';
+}
+
+function normalizeWidgets(input) {
+  let widgets = input;
+  if (typeof widgets === 'string') {
+    try { widgets = JSON.parse(widgets); }
+    catch { widgets = []; }
+  }
+  if (!Array.isArray(widgets)) return [];
+  return widgets.map((w) => ({
+    title: String(w?.title || '').trim(),
+    image: String(w?.image || '').trim(),
+    link: String(w?.link || '').trim(),
+  })).filter(w => w.title || w.image || w.link).slice(0, 6);
+}
+
+function profileAccent(user) {
+  const accent = String(user?.accent_color || '').trim();
+  return accent || '#5a9fd4';
+}
+
+function applyProfileMedia(root) {
+  root.querySelectorAll('[data-profile-bg]').forEach((el) => {
+    const bg = String(el.dataset.profileBg || '').trim();
+    if (bg) {
+      document.body.style.backgroundImage = `url("${bg}")`;
+      document.body.style.backgroundSize = 'cover';
+      document.body.style.backgroundPosition = 'center center';
+      document.body.style.backgroundAttachment = 'fixed';
+    }
+  });
 }
 
 async function verifyToken() {
   if (!token) return;
   const d = await api('GET', '/api/me');
   if (d.error) {
-    token = null; me = null; localStorage.clear();
+    token = null;
+    me = null;
+    localStorage.clear();
   } else {
-    me = d; localStorage.setItem('me', JSON.stringify(me));
+    me = d;
+    localStorage.setItem('me', JSON.stringify(me));
   }
 }
 
@@ -359,21 +944,22 @@ function render() {
   const app = document.getElementById('app');
   if (!token) { app.innerHTML = renderAuth(); return bindAuth(); }
   app.innerHTML = renderShell();
-  
   if (view === 'feed') loadFeed();
   else if (view === 'explore') loadExplore();
-  else if (view === 'music') loadMusic();
+  else if (view === 'notifications') loadNotifications();
   else if (view === 'profile' && profileUser) loadProfile(profileUser);
+  else if (view === 'settings') renderSettings();
 }
 
 function renderAuth(mode) {
   if (mode === 'register') {
     return `<div class="auth">
       <div class="auth-panel">
-        <img src="${LOGO_URL}" alt="Aero World" style="width:72px;height:72px;object-fit:contain;margin-bottom:4px"><h1>Aero World</h1>
+        <img src="${LOGO_URL}" alt="Aero World" style="width:72px;height:72px;object-fit:contain;filter:drop-shadow(0 2px 8px rgba(30,80,160,0.5));margin-bottom:4px"><h1>Aero World</h1>
         <p class="auth-sub">create your account</p>
         <input id="ru" placeholder="choose a username" autocomplete="off">
         <input id="rp" placeholder="choose a password" type="password">
+        <input id="rp2" placeholder="confirm password" type="password">
         <button class="btn btn-primary" onclick="doRegister()">Create Account</button>
         <button class="btn btn-ghost" onclick="showLogin()">← Back to Sign In</button>
         <p class="err" id="aerr" style="display:none"></p>
@@ -382,7 +968,7 @@ function renderAuth(mode) {
   }
   return `<div class="auth">
     <div class="auth-panel">
-      <img src="${LOGO_URL}" alt="Aero World" style="width:72px;height:72px;object-fit:contain;margin-bottom:4px"><h1>Aero World</h1>
+      <img src="${LOGO_URL}" alt="Aero World" style="width:72px;height:72px;object-fit:contain;filter:drop-shadow(0 2px 8px rgba(30,80,160,0.5));margin-bottom:4px"><h1>Aero World</h1>
       <p class="auth-sub">connect · share · discover</p>
       <input id="u" placeholder="username" autocomplete="off">
       <input id="p" placeholder="password" type="password">
@@ -393,15 +979,26 @@ function renderAuth(mode) {
   </div>`;
 }
 
-function showRegister() { document.getElementById('app').innerHTML = renderAuth('register'); }
-function showLogin() { document.getElementById('app').innerHTML = renderAuth('login'); bindAuth(); }
-function bindAuth() { document.getElementById('p')?.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); }); }
+function showRegister() {
+  document.getElementById('app').innerHTML = renderAuth('register');
+  document.getElementById('rp2').addEventListener('keydown', e => { if (e.key === 'Enter') doRegister(); });
+}
+
+function showLogin() {
+  document.getElementById('app').innerHTML = renderAuth('login');
+  bindAuth();
+}
+
+function bindAuth() {
+  document.getElementById('p').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+}
 
 async function doLogin() {
   const el = $('#aerr');
   const d = await api('POST', '/api/login', { username: $('#u').value.trim(), password: $('#p').value });
   if (d.error) { el.textContent = d.error; el.style.display = 'block'; return; }
-  token = d.token; me = d.user; localStorage.setItem('token', token); localStorage.setItem('me', JSON.stringify(me));
+  token = d.token; me = d.user;
+  localStorage.setItem('token', token); localStorage.setItem('me', JSON.stringify(me));
   render();
 }
 
@@ -409,28 +1006,36 @@ async function doRegister() {
   const el = $('#aerr');
   const username = ($('#ru') || $('#u'))?.value.trim();
   const password = ($('#rp') || $('#p'))?.value;
+  const confirm = $('#rp2')?.value;
+  if (confirm !== undefined && password !== confirm) { el.textContent = 'Passwords do not match.'; el.style.display = 'block'; return; }
   if (!username) { el.textContent = 'Please enter a username.'; el.style.display = 'block'; return; }
+  if (!password) { el.textContent = 'Please enter a password.'; el.style.display = 'block'; return; }
   const d = await api('POST', '/api/register', { username, password });
   if (d.error) { el.textContent = d.error; el.style.display = 'block'; return; }
-  token = d.token; me = d.user; localStorage.setItem('token', token); localStorage.setItem('me', JSON.stringify(me));
+  token = d.token; me = d.user;
+  localStorage.setItem('token', token); localStorage.setItem('me', JSON.stringify(me));
   render();
 }
 
+function getInitial(name) { return name ? name[0].toUpperCase() : '?'; }
+
 function renderShell() {
-  const hasSidebar = (view === 'feed' || view === 'explore' || view === 'music');
+  const hasSidebar = (view === 'feed' || view === 'explore');
   return `<div class="main">
     <nav>
-      <span class="logo"><img src="${LOGO_URL}" alt="" style="height:32px;width:32px;vertical-align:middle;margin-right:6px;">Aero World</span>
+      <span class="logo"><img src="${LOGO_URL}" alt="" style="height:32px;width:32px;object-fit:contain;vertical-align:middle;margin-right:6px;filter:drop-shadow(0 1px 3px rgba(30,80,160,0.5))">Aero World</span>
       <div class="nav-links">
         <button class="${view === 'feed' ? 'active' : ''}" onclick="goto('feed')">Explore</button>
-        <button class="${view === 'music' ? 'active' : ''}" onclick="goto('music')">Music</button>
+        <button class="${view === 'notifications' ? 'active' : ''}" onclick="goto('notifications')" id="notif-nav-btn">Notifications<span id="notif-badge" style="display:none;margin-left:4px;background:#e05080;color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:8px;vertical-align:middle"></span></button>
         <button class="${view === 'profile' && profileUser === me?.username ? 'active' : ''}" onclick="goto('profile', me?.username)">@${escHtml(me?.username || '')}</button>
-        <button class="btn-ghost" onclick="logout()" style="margin-left:auto; padding: 4px 10px">Logout</button>
+        <button class="${view === 'settings' ? 'active' : ''}" onclick="goto('settings')">⚙</button>
       </div>
     </nav>
     ${hasSidebar
       ? `<div class="two-col-layout">
-           <div class="news-sidebar" id="news-sidebar"><div style="font-size:11px;color:var(--text-light);padding:12px 10px">Loading sidebar...</div></div>
+           <div class="news-sidebar" id="news-sidebar">
+             <div class="news-sidebar-loading">Loading…</div>
+           </div>
            <div class="main-col" id="content"></div>
          </div>`
       : `<div id="content"></div>`
@@ -438,176 +1043,1209 @@ function renderShell() {
   </div>`;
 }
 
-function goto(v, user) { view = v; if (user) profileUser = user; render(); }
-function logout() { token = null; me = null; localStorage.removeItem('token'); localStorage.removeItem('me'); globalAudio.pause(); document.getElementById('micro-player').style.display='none'; render(); }
+function goto(v, user) {
+  view = v;
+  if (user) profileUser = user;
+  render();
+}
+
+// Pending post highlight: set before calling goto so loadProfile can pick it up
+let _pendingScrollPostId = null;
+
+// Navigate to a specific post on a user's profile and highlight it
+function gotoPost(username, postId) {
+  _pendingScrollPostId = postId;
+  goto('profile', username);
+}
 
 async function loadFeed() {
-  document.getElementById('news-sidebar').innerHTML = `<div class="empty">Sidebar Loaded</div>`;
+  await fetchPoints();
+  startOnlinePresence();
+  loadNewsSidebar();
   const content = document.getElementById('content');
   content.innerHTML = `
     <div class="compose">
-      <textarea id="ta" placeholder="What's on your mind?"></textarea>
+      <textarea id="ta" placeholder="What's on your mind?" rows="3"></textarea>
+      <div id="media-preview-wrap" style="display:none">
+        <div id="media-preview"></div>
+        <button id="media-clear" onclick="clearMedia()" title="Remove">×</button>
+      </div>
+      <div id="media-err"></div>
       <div class="compose-footer">
+        <div class="compose-footer-left">
+          <label class="media-btn" title="Attach image or video">
+            📎 Photo / Video
+            <input type="file" id="media-file" accept="image/png,image/jpeg,image/gif,video/mp4" style="display:none" onchange="handleMediaFile(this)">
+          </label>
+          <button class="picker-btn" id="emoji-btn" onclick="togglePicker('emoji')" title="Emoji">😊 Emoji</button>
+          <button class="picker-btn" id="sticker-btn" onclick="togglePicker('sticker')" title="Stickers">🎨 Sticker</button>
+          <div id="picker-popup" style="display:none" class="picker-popup">
+            <div class="picker-tabs" id="picker-tabs"></div>
+            <div class="picker-body" id="picker-body"></div>
+          </div>
+        </div>
         <button class="post-btn" onclick="submitPost()">Post</button>
       </div>
     </div>
     <div id="posts"></div>`;
   const posts = await api('GET', '/api/feed');
-  if (posts && posts.length) document.getElementById('posts').innerHTML = posts.map(renderPost).join('');
-  else document.getElementById('posts').innerHTML = `<div class="empty">No posts yet.</div>`;
+  if (!Array.isArray(posts)) { token = null; localStorage.clear(); render(); return; }
+  document.getElementById('posts').innerHTML = posts.length
+    ? posts.map(renderPost).join('')
+    : `<div class="empty">Nothing here yet. Be the first to post!</div>`;
+  // Check & display timeout state on feed load
+  await pollTimeoutStatus();
+  startTimeoutPoller();
 }
 
 async function loadExplore() {
-  document.getElementById('news-sidebar').innerHTML = `<div class="empty">Sidebar Loaded</div>`;
+  startOnlinePresence();
+  loadNewsSidebar();
   const content = document.getElementById('content');
-  content.innerHTML = `<div class="search-bar"><input id="sq" placeholder="🔍 Search..."></div><div id="results"></div>`;
+  content.innerHTML = `
+    <div class="search-bar"><input id="sq" placeholder="🔍  Search users..." oninput="searchUsers(this.value)"></div>
+    <div id="results"></div>`;
   const posts = await api('GET', '/api/explore');
-  if (posts && posts.length) document.getElementById('results').innerHTML = posts.map(renderPost).join('');
+  document.getElementById('results').innerHTML = posts.length
+    ? posts.map(renderPost).join('')
+    : `<div class="empty">No posts yet.</div>`;
 }
 
-function renderPost(p) {
-  return `<div class="post">
-    <div class="post-meta"><span class="post-user">${escHtml(p.username)}</span> <span class="post-time">${timeAgo(p.created_at)}</span></div>
-    <div class="post-content">${escHtml(p.content)}</div>
+async function searchUsers(q) {
+  if (!q.trim()) {
+    const posts = await api('GET', '/api/explore');
+    document.getElementById('results').innerHTML = posts.length
+      ? posts.map(renderPost).join('')
+      : `<div class="empty">No posts yet.</div>`;
+    return;
+  }
+  const users = await api('GET', '/api/search?q=' + encodeURIComponent(q));
+  document.getElementById('results').innerHTML = users.length
+    ? users.map(u => `<div class="user-row" onclick="goto('profile','${escHtml(u.username)}')">
+        <div><div class="user-name">${escHtml(u.username)}</div><div class="user-bio">${escHtml(u.bio || '')}</div></div>
+      </div>`).join('')
+    : `<div class="empty">No users found.</div>`;
+}
+
+function profileWidgetsMarkup(widgets) {
+  const arr = normalizeWidgets(widgets);
+  if (!arr.length) return '';
+  return `<div class="profile-custom-grid">
+    ${arr.map((w) => {
+      const card = `
+        <div class="profile-widget-image" ${w.image ? `data-widget-image="${escHtml(w.image)}"` : ''}></div>
+        <div class="profile-widget-title">${escHtml(w.title || 'Link')}</div>
+        ${w.link ? `<div class="profile-widget-link">${escHtml(w.link)}</div>` : ''}`;
+      return w.link
+        ? `<a class="profile-widget" href="${escHtml(w.link)}" target="_blank" rel="noopener noreferrer">${card}</a>`
+        : `<div class="profile-widget">${card}</div>`;
+    }).join('')}
   </div>`;
 }
 
-async function submitPost() {
-  const ta = document.getElementById('ta');
-  if (!ta.value.trim()) return;
-  const post = await api('POST', '/api/posts', { content: ta.value });
-  if (post.error) return;
-  ta.value = '';
-  document.getElementById('posts').insertAdjacentHTML('afterbegin', renderPost(post));
+function applyWidgetImages(root) {
+  root.querySelectorAll('[data-widget-image]').forEach((el) => {
+    const url = String(el.dataset.widgetImage || '').trim();
+    if (url) {
+      el.style.backgroundImage = `url("${url}")`;
+    }
+  });
 }
 
 async function loadProfile(username) {
   const content = document.getElementById('content');
   const d = await api('GET', '/api/users/' + username);
   if (d.error) { content.innerHTML = `<div class="empty">User not found.</div>`; return; }
-  content.innerHTML = `<div class="compose" style="text-align:center"><h2>@${escHtml(d.username)}</h2></div>
-    <div id="profile-posts">${d.posts.length ? d.posts.map(renderPost).join('') : `<div class="empty">No posts yet.</div>`}</div>`;
+  const isMe = d.id === me?.id;
+  const accent = profileAccent(d);
+  const widgets = normalizeWidgets(d.profile_widgets);
+  const userbars = normalizeUserbars(d.userbars);
+  content.innerHTML = `
+    <div class="profile-layout">
+      <div class="profile-center-col">
+        <div class="profile-page" data-profile-bg="${escHtml(d.profile_background || '')}" style="--profile-accent:${escHtml(accent)};box-shadow:0 6px 24px color-mix(in srgb,${escHtml(accent)} 35%,transparent),inset 0 1px 0 rgba(255,255,255,0.95)">
+          <div class="profile-hero">
+            <div class="profile-body">
+              <div class="profile-avatar">${d.avatar_url ? `<img src="${escHtml(d.avatar_url)}" alt="avatar" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : getInitial(d.username)}</div>
+              <div class="profile-name">${escHtml(d.username)}</div>
+              ${d.bio ? `<div class="profile-bio">${escHtml(d.bio)}</div>` : ''}
+              <div class="profile-stats">
+                <div class="stat"><strong>${d.posts.length}</strong>posts</div>
+                <div class="stat"><strong>${d.followers}</strong>followers</div>
+                <div class="stat"><strong>${d.following}</strong>following</div>
+              </div>
+              <div class="profile-actions">
+                ${isMe
+                  ? `<button class="follow-btn unfollowing-btn" onclick="goto('settings')">Edit Profile</button>`
+                  : `<button class="follow-btn ${d.isFollowing ? 'following-btn' : 'unfollowing-btn'}" onclick="toggleFollow(${d.id})">${d.isFollowing ? 'Following ✓' : 'Follow'}</button>`}
+              </div>
+              ${widgets.length ? profileWidgetsMarkup(widgets) : (isMe ? `<div class="save-note">Добавь баннер, фон и карточки в Settings.</div>` : '')}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    ${userbars.length ? `<div class="profile-userbars-list">
+      ${userbars.map(ub => ub.href
+        ? `<a class="profile-userbar" href="${escHtml(ub.href)}" target="_blank" rel="noopener noreferrer"><img src="${escHtml(ub.img)}" alt="userbar" loading="lazy"></a>`
+        : `<div class="profile-userbar"><img src="${escHtml(ub.img)}" alt="userbar" loading="lazy"></div>`
+      ).join('')}
+    </div>` : ''}
+    <div class="profile-post-shell" id="profile-posts">
+      ${d.posts.length ? d.posts.map(p => renderPost({ ...p, username }, { pinnedPostId: d.pinned_post_id, isOwner: isMe })).join('') : `<div class="empty">No posts yet.</div>`}
+    </div>`;
+  applyProfileMedia(content);
+  applyWidgetImages(content);
+
+  // If we arrived here via gotoPost(), scroll to and highlight the target post
+  if (_pendingScrollPostId !== null) {
+    const targetId = _pendingScrollPostId;
+    _pendingScrollPostId = null;
+    const el = document.getElementById(`post-${targetId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.style.transition = 'box-shadow 0.4s ease, outline 0.4s ease';
+      el.style.outline = '2px solid rgba(60,140,225,0.75)';
+      el.style.boxShadow = '0 0 0 4px rgba(60,140,225,0.18), 0 6px 24px rgba(60,140,225,0.3)';
+      setTimeout(() => { el.style.outline = ''; el.style.boxShadow = ''; }, 2400);
+    }
+  }
 }
 
-// ── MUSIC PLATFORM UI ────────────────────────────────────────
+function renderSettings() {
+  const widgets = normalizeWidgets(me?.profile_widgets);
+  const slotCount = 4;
+  const slots = Array.from({ length: slotCount }, (_, i) => widgets[i] || { title: '', image: '', link: '' });
+  const ubSlotCount = 8;
+  const ubSlots = Array.from({ length: ubSlotCount }, (_, i) => normalizeUserbars(me?.userbars)[i] || { img: '', href: '' });
+  const content = document.getElementById('content');
+  content.innerHTML = `
+    <div class="settings">
+      <div class="settings-panel profile-editor">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:2px">
+          <h2 style="margin:0">Edit Profile</h2>
+          <button class="btn btn-primary" onclick="saveProfile()" style="max-width:140px;padding:7px 16px;font-size:11.5px">Save Changes</button>
+        </div>
+        <label class="editor-label">Bio</label>
+        <textarea id="bio-in" placeholder="Your bio...">${escHtml(me?.bio || '')}</textarea>
 
-let _pendingMusicAudio = null;
-let _pendingMusicCover = null;
+        <div class="profile-editor-grid">
+          <div>
+            <label class="editor-label">Avatar Image URL</label>
+            <input id="avatar-in" placeholder="https://..." value="${escHtml(me?.avatar_url || '')}">
+          </div>
+          <div>
+            <label class="editor-label">Profile Background URL</label>
+            <input id="bg-in" placeholder="https://..." value="${escHtml(me?.profile_background || '')}">
+          </div>
+          <div>
+            <label class="editor-label">Accent Color</label>
+            <input id="accent-in" placeholder="#5a9fd4" value="${escHtml(me?.accent_color || '#5a9fd4')}">
+          </div>
+        </div>
 
-function toggleMusicForm() {
-  const form = document.getElementById('music-upload-box');
-  form.style.display = form.style.display === 'none' ? 'flex' : 'none';
+        <h2>Userbars</h2>
+        <div class="userbar-editor" id="userbar-editor">
+          ${ubSlots.map((ub, i) => `
+            <div class="userbar-slot">
+              <div class="userbar-slot-label">Userbar ${i + 1}</div>
+              <div class="userbar-slot-grid">
+                <input id="ub${i}-img" placeholder="Image URL (gif/png)" value="${escHtml(ub.img || '')}" oninput="previewUserbar(${i})">
+                <input id="ub${i}-href" placeholder="Link URL (optional)" value="${escHtml(ub.href || '')}">
+              </div>
+              <div class="userbar-preview" id="ub${i}-preview">
+                ${ub.img ? `<img src="${escHtml(ub.img)}" alt="preview">` : ''}
+              </div>
+            </div>
+          `).join('')}
+        </div>
+
+        <h2>Linked Image Cards</h2>
+        <div class="widget-editor">
+          ${slots.map((w, i) => `
+            <div class="widget-slot">
+              <h3>Card ${i + 1}</h3>
+              <div class="widget-slot-grid">
+                <input id="w${i}-title" placeholder="Title" value="${escHtml(w.title || '')}">
+                <input id="w${i}-link" placeholder="Link URL" value="${escHtml(w.link || '')}">
+                <input id="w${i}-image" class="full" placeholder="Image URL" value="${escHtml(w.image || '')}">
+              </div>
+            </div>
+          `).join('')}
+        </div>
+
+        <button class="btn btn-ghost" onclick="logout()" style="max-width:140px">Sign Out</button>
+      </div>
+    </div>`;
 }
 
-function handleMusicAudio(input) {
+async function saveProfile() {
+  const widgets = [];
+  for (let i = 0; i < 4; i++) {
+    const title = document.getElementById(`w${i}-title`).value.trim();
+    const image = document.getElementById(`w${i}-image`).value.trim();
+    const link = document.getElementById(`w${i}-link`).value.trim();
+    if (title || image || link) widgets.push({ title, image, link });
+  }
+
+  const userbars = [];
+  for (let i = 0; i < 8; i++) {
+    const img = document.getElementById(`ub${i}-img`).value.trim();
+    const href = document.getElementById(`ub${i}-href`).value.trim();
+    if (img) userbars.push({ img, href });
+  }
+
+  const payload = {
+    bio: document.getElementById('bio-in').value,
+    avatar_url: document.getElementById('avatar-in').value.trim(),
+    profile_background: document.getElementById('bg-in').value.trim(),
+    accent_color: document.getElementById('accent-in').value.trim(),
+    profile_widgets: widgets,
+    userbars,
+  };
+
+  const d = await api('PATCH', '/api/me', payload);
+  if (d.error) return;
+  me = d.user;
+  localStorage.setItem('me', JSON.stringify(me));
+  if (view === 'profile') loadProfile(me.username);
+}
+
+async function toggleFollow(id) {
+  await api('POST', '/api/follow/' + id);
+  loadProfile(profileUser);
+}
+
+async function togglePin(postId, currentlyPinned) {
+  if (currentlyPinned) {
+    await api('DELETE', '/api/me/pin');
+  } else {
+    await api('POST', '/api/me/pin/' + postId);
+  }
+  // Reload profile to re-render with updated pin state
+  loadProfile(profileUser);
+}
+
+function renderPost(p, opts = {}) {
+  const { pinnedPostId = null, isOwner = false } = opts;
+  const isPinned = pinnedPostId === p.id;
+  const del = p.user_id === me?.id
+    ? `<button class="post-del" onclick="delPost(${p.id},this)" title="Delete">×</button>`
+    : '';
+  const pinBtn = isOwner
+    ? `<button class="post-pin${isPinned ? ' pinned' : ''}" onclick="togglePin(${p.id},${isPinned})" title="${isPinned ? 'Unpin post' : 'Pin to profile'}">📌</button>`
+    : '';
+  const pinnedBadge = isPinned ? `<div class="pinned-badge">📌 Pinned</div>` : '';
+  let media = '';
+  if (p.media_url) {
+    if (p.media_type === 'video/mp4') {
+      media = `<div class="post-media"><video src="${p.media_url}" controls preload="metadata" style="max-height:360px"></video></div>`;
+    } else if (p.is_sticker) {
+      media = `<div class="post-media"><img class="post-sticker" src="${p.media_url}" alt="sticker" loading="lazy"></div>`;
+    } else {
+      media = `<div class="post-media"><img src="${p.media_url}" alt="media" loading="lazy"></div>`;
+    }
+  }
+  const contentHtml = p.content ? `<div class="post-content">${renderEmojiText(p.content)}</div>` : '';
+  const liked = p.liked || false;
+  const likeCount = p.like_count || 0;
+  const commentCount = p.comment_count || 0;
+  return `<div class="post" id="post-${p.id}">
+    ${del}${pinBtn}
+    ${pinnedBadge}
+    <div class="post-meta">
+      <span class="post-user" onclick="goto('profile','${escHtml(p.username)}')">${escHtml(p.username)}</span>
+      <span class="post-time">${timeAgo(p.created_at)}</span>
+    </div>
+    ${contentHtml}
+    ${media}
+    <div class="post-actions">
+      <button class="action-btn ${liked ? 'liked' : ''}" id="like-btn-${p.id}" onclick="toggleLike(${p.id})">
+        <span class="like-heart">${liked ? '❤️' : '🤍'}</span>
+        <span class="action-count" id="like-count-${p.id}">${likeCount > 0 ? likeCount : ''}</span>
+      </button>
+      <button class="action-btn" onclick="toggleComments(${p.id})">
+        <span>💬</span>
+        <span class="action-count" id="comment-count-${p.id}">${commentCount > 0 ? commentCount : ''}</span>
+      </button>
+    </div>
+    <div class="comments-section" id="comments-${p.id}" style="display:none"></div>
+  </div>`;
+}
+
+// ── LIKES ─────────────────────────────────────────────────────
+async function toggleLike(postId) {
+  const btn = document.getElementById(`like-btn-${postId}`);
+  const countEl = document.getElementById(`like-count-${postId}`);
+  const isLiked = btn.classList.contains('liked');
+  // Optimistic UI
+  btn.classList.toggle('liked', !isLiked);
+  btn.querySelector('.like-heart').textContent = isLiked ? '🤍' : '❤️';
+  const d = await api('POST', `/api/posts/${postId}/like`);
+  if (d.error) {
+    // Revert on error
+    btn.classList.toggle('liked', isLiked);
+    btn.querySelector('.like-heart').textContent = isLiked ? '❤️' : '🤍';
+    return;
+  }
+  btn.classList.toggle('liked', d.liked);
+  btn.querySelector('.like-heart').textContent = d.liked ? '❤️' : '🤍';
+  countEl.textContent = d.like_count > 0 ? d.like_count : '';
+}
+
+// ── COMMENTS ──────────────────────────────────────────────────
+const _commentsOpen = new Set();
+const COMMENTS_PAGE = 3; // how many to show initially
+
+async function toggleComments(postId) {
+  const section = document.getElementById(`comments-${postId}`);
+  if (!section) return;
+  if (_commentsOpen.has(postId)) {
+    _commentsOpen.delete(postId);
+    section.style.display = 'none';
+    section.innerHTML = '';
+  } else {
+    _commentsOpen.add(postId);
+    section.style.display = 'block';
+    await loadComments(postId);
+  }
+}
+
+async function loadComments(postId) {
+  const section = document.getElementById(`comments-${postId}`);
+  if (!section) return;
+  section.innerHTML = `<div style="font-size:11px;color:var(--text-light);padding:4px 0">Loading…</div>`;
+  // Refresh me to get latest avatar
+  try { const fresh = await api('GET', '/api/me'); if (fresh && !fresh.error) me = fresh; } catch {}
+  const comments = await api('GET', `/api/posts/${postId}/comments`);
+  if (!Array.isArray(comments)) { section.innerHTML = ''; return; }
+  renderComments(postId, comments);
+}
+
+function renderComments(postId, comments) {
+  const section = document.getElementById(`comments-${postId}`);
+  if (!section) return;
+  const countEl = document.getElementById(`comment-count-${postId}`);
+  if (countEl) countEl.textContent = comments.length > 0 ? comments.length : '';
+
+  const visible = comments.slice(0, COMMENTS_PAGE);
+  const hidden  = comments.slice(COMMENTS_PAGE);
+
+  // Current user avatar — always fresh from me object
+  const myAvatar = me?.avatar_url
+    ? `<img src="${escHtml(me.avatar_url)}" alt="">`
+    : getInitial(me?.username);
+
+  const showMoreBtn = hidden.length > 0
+    ? `<button class="comments-load-more" id="show-more-${postId}" onclick="showMoreComments(${postId})">
+        ↓ Show ${hidden.length} more comment${hidden.length > 1 ? 's' : ''}
+       </button>`
+    : '';
+
+  section.innerHTML = `
+    <div id="comment-list-${postId}">
+      ${visible.length ? visible.map(c => renderComment(postId, c)).join('') : `<div style="font-size:11px;color:var(--text-light);padding:2px 0 6px">No comments yet</div>`}
+    </div>
+    ${showMoreBtn}
+    <div class="comment-input-row">
+      <div class="comment-avatar" id="my-avatar-${postId}">${myAvatar}</div>
+      <input class="comment-input" id="comment-input-${postId}" placeholder="Add a comment…" maxlength="500"
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();submitComment(${postId})}">
+      <button class="comment-submit" onclick="submitComment(${postId})">Send</button>
+    </div>`;
+
+  // Store hidden comments on the section element for show more
+  section._hiddenComments = hidden;
+  section._postId = postId;
+}
+
+function showMoreComments(postId) {
+  const section = document.getElementById(`comments-${postId}`);
+  if (!section || !section._hiddenComments) return;
+  const list = document.getElementById(`comment-list-${postId}`);
+  section._hiddenComments.forEach(c => {
+    list.insertAdjacentHTML('beforeend', renderComment(postId, c));
+  });
+  section._hiddenComments = [];
+  document.getElementById(`show-more-${postId}`)?.remove();
+}
+
+function renderComment(postId, c) {
+  const canDel = c.user_id === me?.id;
+  const avatar = c.avatar_url
+    ? `<img src="${escHtml(c.avatar_url)}" alt="">`
+    : getInitial(c.username);
+  return `<div class="comment" id="comment-item-${c.id}">
+    <div class="comment-avatar">${avatar}</div>
+    <div class="comment-body">
+      <div class="comment-meta">
+        <span class="comment-user" onclick="goto('profile','${escHtml(c.username)}')">${escHtml(c.username)}</span>
+        <span class="comment-time">${timeAgo(c.created_at)}</span>
+        ${canDel ? `<button class="comment-del" onclick="deleteComment(${postId},${c.id})" title="Delete">×</button>` : ''}
+      </div>
+      <div class="comment-text">${renderEmojiText(c.content)}</div>
+    </div>
+  </div>`;
+}
+
+async function submitComment(postId) {
+  const input = document.getElementById(`comment-input-${postId}`);
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  const c = await api('POST', `/api/posts/${postId}/comments`, { content: text });
+  if (c.error) { input.value = text; return; }
+  const list = document.getElementById(`comment-list-${postId}`);
+  if (list) {
+    // Remove "no comments" placeholder if present
+    const placeholder = list.querySelector('div');
+    if (placeholder && !placeholder.id) placeholder.remove();
+    list.insertAdjacentHTML('beforeend', renderComment(postId, c));
+  }
+  // Update counter
+  const countEl = document.getElementById(`comment-count-${postId}`);
+  if (countEl) {
+    const cur = parseInt(countEl.textContent) || 0;
+    countEl.textContent = cur + 1;
+  }
+  // Also update my avatar in input row in case it just loaded
+  const myAvatarEl = document.getElementById(`my-avatar-${postId}`);
+  if (myAvatarEl && me?.avatar_url) {
+    myAvatarEl.innerHTML = `<img src="${escHtml(me.avatar_url)}" alt="">`;
+  }
+  registerActivity();
+}
+
+async function deleteComment(postId, commentId) {
+  await api('DELETE', `/api/comments/${commentId}`);
+  document.getElementById(`comment-item-${commentId}`)?.remove();
+  const countEl = document.getElementById(`comment-count-${postId}`);
+  if (countEl) {
+    const cur = parseInt(countEl.textContent) || 1;
+    countEl.textContent = cur - 1 > 0 ? cur - 1 : '';
+  }
+}
+
+let _pendingMedia = null; // { dataUrl, type }
+
+function handleMediaFile(input) {
   const file = input.files[0];
+  const err = document.getElementById('media-err');
+  err.textContent = '';
   if (!file) return;
-  // Limit to roughly 15MB for frontend checks (safe bound)
-  if (file.size > 15 * 1024 * 1024) { alert("Audio file is too large (max 15MB)"); input.value = ''; return; }
-  const reader = new FileReader();
-  reader.onload = e => { _pendingMusicAudio = e.target.result; document.getElementById('music-file-name').textContent = 'Selected: ' + file.name; };
-  reader.readAsDataURL(file);
-}
 
-function handleMusicCover(input) {
-  const file = input.files[0];
-  if (!file) return;
+  const MAX = 25 * 1024 * 1024;
+  if (file.size > MAX) { err.textContent = 'File too large (max 25 MB)'; input.value=''; return; }
+
+  const ALLOWED = ['image/png','image/jpeg','image/gif','video/mp4'];
+  if (!ALLOWED.includes(file.type)) { err.textContent = 'Only PNG, JPG, GIF, MP4 allowed'; input.value=''; return; }
+
   const reader = new FileReader();
-  reader.onload = e => { 
-    _pendingMusicCover = e.target.result; 
-    document.getElementById('music-cover-preview').style.display = 'block';
-    document.getElementById('music-cover-preview').innerHTML = `<img src="${e.target.result}" style="max-height:80px;border-radius:6px">`; 
+  reader.onload = e => {
+    if (file.type === 'video/mp4') {
+      // Check duration via a temp video element
+      const vid = document.createElement('video');
+      vid.preload = 'metadata';
+      vid.onloadedmetadata = () => {
+        URL.revokeObjectURL(vid.src);
+        if (vid.duration > 180) {
+          err.textContent = 'Video too long (max 3 minutes)';
+          input.value = '';
+          return;
+        }
+        _pendingMedia = { dataUrl: e.target.result, type: file.type };
+        showMediaPreview(file.type, e.target.result);
+      };
+      vid.src = URL.createObjectURL(file);
+    } else {
+      _pendingMedia = { dataUrl: e.target.result, type: file.type };
+      showMediaPreview(file.type, e.target.result);
+    }
   };
   reader.readAsDataURL(file);
 }
 
-async function submitMusic() {
-  const title = document.getElementById('music-title').value.trim();
-  const composer = document.getElementById('music-composer').value.trim();
-  const err = document.getElementById('music-err');
-  
-  if (!title || !composer) { err.textContent = 'Name and Composer are required.'; err.style.display = 'block'; return; }
-  if (!_pendingMusicAudio) { err.textContent = 'Please select an audio file.'; err.style.display = 'block'; return; }
-  
-  err.style.display = 'none';
-  const btn = document.getElementById('music-submit-btn');
-  btn.textContent = 'Uploading...'; btn.disabled = true;
-  
-  const d = await api('POST', '/api/music', {
-    title, composer, audio_url: _pendingMusicAudio, cover_url: _pendingMusicCover
-  });
-  
-  btn.textContent = 'Upload Music'; btn.disabled = false;
-  if (d.error) { err.textContent = d.error; err.style.display = 'block'; return; }
-  
-  // Clear form and reload list
-  document.getElementById('music-title').value = '';
-  document.getElementById('music-composer').value = '';
-  _pendingMusicAudio = null; _pendingMusicCover = null;
-  document.getElementById('music-file-name').textContent = '';
-  document.getElementById('music-cover-preview').style.display = 'none';
-  toggleMusicForm();
-  loadMusicList();
+function showMediaPreview(type, src) {
+  const wrap = document.getElementById('media-preview-wrap');
+  const preview = document.getElementById('media-preview');
+  if (type === 'video/mp4') {
+    preview.innerHTML = `<video src="${src}" controls style="max-height:200px;border-radius:8px;max-width:100%"></video>`;
+  } else {
+    preview.innerHTML = `<img src="${src}" style="max-height:${_pendingMedia?.isSticker ? '100px' : '200px'};border-radius:8px;max-width:100%">`;
+  }
+  wrap.style.display = 'inline-block';
 }
 
-async function loadMusicList() {
-  const listEl = document.getElementById('music-list');
-  const tracks = await api('GET', '/api/music');
-  if (!tracks || !tracks.length) {
-    listEl.innerHTML = `<div class="empty">No music uploaded yet. Be the first!</div>`;
+function clearMedia() {
+  _pendingMedia = null;
+  document.getElementById('media-preview-wrap').style.display = 'none';
+  document.getElementById('media-preview').innerHTML = '';
+  document.getElementById('media-file').value = '';
+  document.getElementById('media-err').textContent = '';
+}
+
+// ── EMOJI / STICKER PICKER ────────────────────────────────────
+const GITHUB_API_BASE = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents`;
+const RAW_BASE = `https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/${GITHUB_BRANCH}`;
+
+let _pickerCache = { emoji: null, sticker: null }; // null = not loaded, [] = loaded
+let _pickerOpen = null; // 'emoji' | 'sticker' | null
+
+const IMAGE_EXTS = new Set(['png','gif','jpg','jpeg','webp']);
+
+function pickerFileUrl(folder, filename) {
+  return `${RAW_BASE}/${folder}/${encodeURIComponent(filename)}`;
+}
+
+async function fetchPickerFiles(folder) {
+  if (_pickerCache[folder]) return _pickerCache[folder];
+  try {
+    const r = await fetch(`${GITHUB_API_BASE}/${folder}?ref=${GITHUB_BRANCH}`, {
+      headers: { Accept: 'application/vnd.github+json' }
+    });
+    if (!r.ok) { _pickerCache[folder] = []; return []; }
+    const data = await r.json();
+    const files = (Array.isArray(data) ? data : [])
+      .filter(f => f.type === 'file' && IMAGE_EXTS.has(f.name.split('.').pop().toLowerCase()))
+      .map(f => f.name);
+    _pickerCache[folder] = files;
+    return files;
+  } catch { _pickerCache[folder] = []; return []; }
+}
+
+function emojiTag(filename) {
+  // strip extension for the tag name
+  return ':' + filename.replace(/\.[^.]+$/, '') + ':';
+}
+
+function renderPickerGrid(folder, files, mode) {
+  const body = document.getElementById('picker-body');
+  if (!files.length) {
+    body.innerHTML = `<div class="picker-empty">No ${mode}s found in /${folder}/</div>`;
     return;
   }
-  musicList = tracks;
-  listEl.innerHTML = tracks.map(t => `
-    <div class="music-track" onclick="playTrack(${t.id})">
-      <img src="${t.cover_url || LOGO_URL}" class="music-cover" alt="cover">
-      <div class="music-info">
-        <div class="music-title">${escHtml(t.title)}</div>
-        <div class="music-composer">${escHtml(t.composer)} &bull; Added by @${escHtml(t.username)}</div>
+  if (mode === 'emoji') {
+    body.innerHTML = `<div class="picker-grid">${files.map(f => {
+      const url = pickerFileUrl(folder, f);
+      const tag = emojiTag(f);
+      return `<div class="picker-item" title="${tag}" onclick="insertEmoji('${tag}')"><img src="${url}" alt="${tag}" loading="lazy"></div>`;
+    }).join('')}</div>`;
+  } else {
+    body.innerHTML = `<div class="picker-sticker-grid">${files.map(f => {
+      const url = pickerFileUrl(folder, f);
+      return `<div class="picker-sticker-item" title="${f}" onclick="insertSticker('${url}', '${f}')"><img src="${url}" alt="${f}" loading="lazy"></div>`;
+    }).join('')}</div>`;
+  }
+}
+
+async function openPicker(mode) {
+  const popup = document.getElementById('picker-popup');
+  const body = document.getElementById('picker-body');
+  const tabs = document.getElementById('picker-tabs');
+
+  // Tabs
+  tabs.innerHTML = `
+    <button class="picker-tab ${mode==='emoji'?'active':''}" onclick="switchPickerTab('emoji')">😊 Emoji</button>
+    <button class="picker-tab ${mode==='sticker'?'active':''}" onclick="switchPickerTab('sticker')">🎨 Stickers</button>`;
+
+  body.innerHTML = `<div class="picker-loading">Loading…</div>`;
+  popup.style.display = 'flex';
+
+  const files = await fetchPickerFiles(mode);
+  renderPickerGrid(mode, files, mode);
+}
+
+async function switchPickerTab(mode) {
+  _pickerOpen = mode;
+  document.querySelectorAll('.picker-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.picker-tab')[mode === 'emoji' ? 0 : 1]?.classList.add('active');
+  document.getElementById('emoji-btn')?.classList.toggle('active', mode === 'emoji');
+  document.getElementById('sticker-btn')?.classList.toggle('active', mode === 'sticker');
+  const triggerBtn = document.getElementById(mode === 'emoji' ? 'emoji-btn' : 'sticker-btn');
+  positionPicker(triggerBtn);
+  const body = document.getElementById('picker-body');
+  body.innerHTML = `<div class="picker-loading">Loading…</div>`;
+  const files = await fetchPickerFiles(mode);
+  renderPickerGrid(mode, files, mode);
+}
+
+function positionPicker(triggerBtn) {
+  const popup = document.getElementById('picker-popup');
+  const rect = triggerBtn.getBoundingClientRect();
+  const popupW = 300;
+  const popupH = 320;
+  const margin = 6;
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+
+  // Prefer opening downward; if not enough space, open upward
+  let top, left;
+  if (rect.bottom + popupH + margin <= vh) {
+    top = rect.bottom + margin;
+  } else {
+    top = rect.top - popupH - margin;
+  }
+  // Align left with button, clamp to viewport
+  left = rect.left;
+  if (left + popupW > vw - 8) left = vw - popupW - 8;
+  if (left < 8) left = 8;
+
+  popup.style.top = top + 'px';
+  popup.style.left = left + 'px';
+  popup.style.width = popupW + 'px';
+}
+
+function togglePicker(mode) {
+  const popup = document.getElementById('picker-popup');
+  const triggerBtn = document.getElementById(mode === 'emoji' ? 'emoji-btn' : 'sticker-btn');
+  if (_pickerOpen === mode && popup.style.display !== 'none') {
+    closePicker(); return;
+  }
+  _pickerOpen = mode;
+  document.getElementById('emoji-btn')?.classList.toggle('active', mode === 'emoji');
+  document.getElementById('sticker-btn')?.classList.toggle('active', mode === 'sticker');
+  popup.style.display = 'flex';
+  positionPicker(triggerBtn);
+  openPicker(mode);
+}
+
+function closePicker() {
+  _pickerOpen = null;
+  const popup = document.getElementById('picker-popup');
+  if (popup) popup.style.display = 'none';
+  document.getElementById('emoji-btn')?.classList.remove('active');
+  document.getElementById('sticker-btn')?.classList.remove('active');
+}
+
+// Close picker when clicking outside
+document.addEventListener('click', (e) => {
+  if (!_pickerOpen) return;
+  const popup = document.getElementById('picker-popup');
+  if (!popup) return;
+  const emojiBtn = document.getElementById('emoji-btn');
+  const stickerBtn = document.getElementById('sticker-btn');
+  if (!popup.contains(e.target) && e.target !== emojiBtn && e.target !== stickerBtn
+      && !emojiBtn?.contains(e.target) && !stickerBtn?.contains(e.target)) {
+    closePicker();
+  }
+});
+
+function insertEmoji(tag) {
+  const ta = document.getElementById('ta');
+  if (!ta) return;
+  const start = ta.selectionStart, end = ta.selectionEnd;
+  ta.value = ta.value.slice(0, start) + tag + ta.value.slice(end);
+  ta.selectionStart = ta.selectionEnd = start + tag.length;
+  ta.focus();
+}
+
+function insertSticker(url, filename) {
+  // Stickers post as media_url (image) immediately when user clicks Post
+  _pendingMedia = { dataUrl: url, type: 'image/gif', isSticker: true, filename };
+  showMediaPreview('image/gif', url);
+  closePicker();
+}
+
+// Render :emoji_name: tags in post text as inline images
+function renderEmojiText(text) {
+  return escHtml(text).replace(/:([a-zA-Z0-9_\-]+):/g, (match, name) => {
+    const url = `${RAW_BASE}/emoji/${encodeURIComponent(name)}.gif`;
+    const urlPng = `${RAW_BASE}/emoji/${encodeURIComponent(name)}.png`;
+    // Try gif first, fallback to png via onerror
+    return `<img class="post-emoji" src="${url}" alt="${match}" title="${match}" onerror="this.src='${urlPng}';this.onerror=null">`;
+  });
+}
+
+
+let _timeoutState = null; // { expiresAt: Date, reason: string } or null
+let _timeoutInterval = null;
+
+function formatTimeLeft(expiresAt) {
+  const secs = Math.max(0, Math.ceil((new Date(expiresAt) - Date.now()) / 1000));
+  if (secs <= 0) return '0s';
+  const m = Math.floor(secs / 60), s = secs % 60;
+  return m > 0 ? `${m}m ${s}s` : `${s}s`;
+}
+
+function renderTimeoutBanner(expiresAt, reason) {
+  const existing = document.getElementById('timeout-banner');
+  const msg = reason ? `Reason: ${escHtml(reason)}` : 'Please wait before posting again.';
+  const html = `<div class="timeout-banner" id="timeout-banner">
+    <div class="timeout-icon">⏳</div>
+    <div class="timeout-text">
+      <strong>You are timed out — <span id="timeout-countdown">${formatTimeLeft(expiresAt)}</span> remaining</strong>
+      <span>${msg}</span>
+    </div>
+  </div>`;
+  if (existing) { existing.outerHTML = html; }
+  else {
+    const compose = document.querySelector('.compose');
+    if (compose) { compose.insertAdjacentHTML('beforebegin', html); compose.classList.add('timeout-compose-block'); }
+  }
+}
+
+function clearTimeoutBanner() {
+  document.getElementById('timeout-banner')?.remove();
+  document.querySelector('.compose')?.classList.remove('timeout-compose-block');
+}
+
+async function pollTimeoutStatus() {
+  try {
+    const d = await api('GET', '/api/me/timeout');
+    if (d.timedOut) {
+      _timeoutState = { expiresAt: d.expiresAt, reason: d.reason };
+      renderTimeoutBanner(d.expiresAt, d.reason);
+    } else {
+      _timeoutState = null;
+      clearTimeoutBanner();
+    }
+  } catch {}
+}
+
+function startTimeoutPoller() {
+  if (_timeoutInterval) clearInterval(_timeoutInterval);
+  // Countdown tick every second
+  _timeoutInterval = setInterval(() => {
+    const cd = document.getElementById('timeout-countdown');
+    if (_timeoutState && cd) {
+      const left = formatTimeLeft(_timeoutState.expiresAt);
+      cd.textContent = left;
+      if (new Date(_timeoutState.expiresAt) <= Date.now()) {
+        pollTimeoutStatus(); // re-check with server
+      }
+    }
+  }, 1000);
+  // Re-sync with server every 15s
+  setInterval(pollTimeoutStatus, 15000);
+}
+
+async function submitPost() {
+  if (_timeoutState && new Date(_timeoutState.expiresAt) > Date.now()) {
+    renderTimeoutBanner(_timeoutState.expiresAt, _timeoutState.reason);
+    return;
+  }
+  const ta = document.getElementById('ta');
+  if (!ta.value.trim() && !_pendingMedia) return;
+  const btn = document.querySelector('.post-btn');
+  btn.disabled = true; btn.textContent = 'Posting…';
+  const body = { content: ta.value };
+  if (_pendingMedia) {
+    if (_pendingMedia.isSticker) {
+      // Stickers are remote URLs, not base64 — send directly, flag as sticker
+      body.media_url = _pendingMedia.dataUrl;
+      body.media_type = 'image/gif';
+      body.is_sticker = true;
+    } else {
+      body.media_url = _pendingMedia.dataUrl;
+      body.media_type = _pendingMedia.type;
+    }
+  }
+  const post = await api('POST', '/api/posts', body);
+  btn.disabled = false; btn.textContent = 'Post';
+  if (post.error === 'timeout') {
+    _timeoutState = { expiresAt: post.expiresAt, reason: post.reason };
+    renderTimeoutBanner(post.expiresAt, post.reason);
+    return;
+  }
+  if (post.error) return;
+  ta.value = '';
+  clearMedia();
+  document.getElementById('posts').insertAdjacentHTML('afterbegin', renderPost(post));
+  registerActivity();
+}
+
+async function delPost(id) {
+  await api('DELETE', '/api/posts/' + id);
+  document.getElementById('post-' + id)?.remove();
+}
+
+function logout() {
+  stopOnlinePresence();
+  token = null; me = null;
+  localStorage.removeItem('token'); localStorage.removeItem('me');
+  render();
+}
+
+// ── AERO POINTS ───────────────────────────────────────────────
+let _aeroPoints = 0;
+
+async function fetchPoints() {
+  try {
+    const d = await api('GET', '/api/me/points');
+    if (typeof d.aero_points === 'number') {
+      _aeroPoints = d.aero_points;
+      _activityCount = d.activity_count ?? 0;
+      updatePointsDisplay();
+    }
+  } catch {}
+}
+
+function updatePointsDisplay(flash) {
+  const el = document.getElementById('snews-pts-val');
+  if (!el) return;
+  el.textContent = _aeroPoints;
+  if (flash) {
+    el.style.transition = 'transform .15s,opacity .15s';
+    el.style.transform = 'scale(1.35)';
+    el.style.opacity = '0.7';
+    setTimeout(() => { el.style.transform = 'scale(1)'; el.style.opacity = '1'; }, 160);
+  }
+}
+
+// Track activity locally to award points instantly without a round-trip
+let _activityCount = 0;
+function registerActivity() {
+  _activityCount++;
+  if (_activityCount % 2 === 0) {
+    _aeroPoints++;
+    updatePointsDisplay(true);
+  }
+}
+
+// kept for any legacy call — now a no-op div
+function renderAeroPointsBar() { return ''; }
+
+// ── NEWS SIDEBAR ──────────────────────────────────────────────
+let _newsItems = [];
+let _newsIndex = 0;
+let _newsRotateInterval = null;
+
+function stopNewsRotation() {
+  if (_newsRotateInterval) { clearInterval(_newsRotateInterval); _newsRotateInterval = null; }
+}
+
+function startNewsRotation() {
+  stopNewsRotation();
+  if (_newsItems.length <= 1) return;
+  _newsRotateInterval = setInterval(() => {
+    _newsIndex = (_newsIndex + 1) % _newsItems.length;
+    renderSidebarNewsItem();
+  }, 25000);
+}
+
+function renderSidebarNewsItem() {
+  const body = document.getElementById('snews-body');
+  if (!body) return;
+  const item = _newsItems[_newsIndex];
+  if (!item) return;
+  const dotsHtml = _newsItems.length > 1
+    ? `<div class="snews-dots">${_newsItems.map((_, i) =>
+        `<div class="snews-dot ${i === _newsIndex ? 'active' : ''}" onclick="jumpNewsItem(${i})"></div>`
+      ).join('')}</div>`
+    : '';
+  body.innerHTML = `<div class="snews-item">
+    <div class="snews-item-user" onclick="goto('profile','${escHtml(item.username)}')" title="${escHtml(item.username)}">${escHtml(item.username)}</div>
+    <div class="snews-item-text">${escHtml(item.content)}</div>
+    <div class="snews-item-time">${timeAgo(item.created_at)}</div>
+    ${dotsHtml}
+  </div>`;
+}
+
+function jumpNewsItem(i) {
+  _newsIndex = i;
+  renderSidebarNewsItem();
+  startNewsRotation();
+}
+
+async function loadNewsSidebar() {
+  const sidebar = document.getElementById('news-sidebar');
+  if (!sidebar) return;
+
+  const news = await api('GET', '/api/news');
+  if (Array.isArray(news)) _newsItems = news;
+  _newsIndex = 0;
+
+  const hint = _aeroPoints >= 10 ? '✨ Ready to send News!' : `${10 - _aeroPoints} more to send News`;
+
+  sidebar.innerHTML = `
+    <div class="online-panel" id="online-panel">
+      <div class="online-header">
+        <span style="font-size:11px">🟢</span>
+        <span class="online-title">Online</span>
+        <span class="online-count" id="online-count">…</span>
       </div>
-      <button class="music-play-btn" onclick="event.stopPropagation(); playTrack(${t.id})">▶ Play</button>
+      <div class="online-body" id="online-body"><div class="online-empty">Loading…</div></div>
     </div>
-  `).join('');
-}
 
-async function loadMusic() {
-  document.getElementById('news-sidebar').innerHTML = `
-    <div class="compose" style="padding:10px;text-align:center;font-size:11px;color:var(--text-light)">
-      Aero World Music<br><br>Listen, share, and discover tunes across the platform.
+    <div class="snews-points">
+      <div class="snews-points-label">⭐ Aero-Points</div>
+      <div class="snews-points-val" id="snews-pts-val">${_aeroPoints}</div>
+    </div>
+
+    <div class="snews-wrap">
+      <div class="snews-header">
+        <span style="font-size:13px">📰</span>
+        <span class="snews-title">News</span>
+        <span class="snews-count">${_newsItems.length}</span>
+      </div>
+      <div class="snews-body" id="snews-body">
+        ${_newsItems.length === 0 ? `<div class="snews-empty">No news yet</div>` : ''}
+      </div>
+    </div>
+
+    <div class="snews-compose">
+      <div class="snews-compose-label">
+        Send News <span class="snews-compose-cost">⭐10</span>
+      </div>
+      <textarea id="snews-ta" placeholder="Write news… (max 456 chars)" maxlength="456"
+        oninput="updateSnewsChar()"></textarea>
+      <div class="snews-compose-footer">
+        <span class="snews-char" id="snews-char">0 / 456</span>
+        <button class="snews-send-btn" onclick="submitSidebarNews()">Send</button>
+      </div>
+      <div class="snews-err" id="snews-err"></div>
     </div>`;
-    
-  const content = document.getElementById('content');
-  content.innerHTML = `
-    <div class="compose" style="display:flex; justify-content:space-between; align-items:center;">
-      <h2 style="font-size:14px;color:var(--text-dark)">Music Platform</h2>
-      <button class="post-btn" onclick="toggleMusicForm()">+ Add Music</button>
-    </div>
-    
-    <div id="music-upload-box" class="compose" style="display:none; flex-direction:column; gap:10px;">
-      <input id="music-title" placeholder="Song Name (Required)">
-      <input id="music-composer" placeholder="Composer Name (Required)">
-      <label class="media-btn" title="Audio File" style="text-align:center;justify-content:center">
-        🎧 Select Audio (MP3/WAV/OGG)
-        <input type="file" id="music-file" accept="audio/*" style="display:none" onchange="handleMusicAudio(this)">
-      </label>
-      <span id="music-file-name" style="font-size:10px;color:var(--text-light);text-align:center"></span>
-      <label class="media-btn" title="Cover Image" style="text-align:center;justify-content:center">
-        🖼️ Select Cover (Optional, GIF/PNG/JPG)
-        <input type="file" id="music-cover" accept="image/png,image/jpeg,image/gif" style="display:none" onchange="handleMusicCover(this)">
-      </label>
-      <div id="music-cover-preview" style="display:none; text-align:center"></div>
-      <div id="music-err" class="err" style="display:none; margin: 0 auto"></div>
-      <button id="music-submit-btn" class="post-btn" style="width:100%" onclick="submitMusic()">Upload Music</button>
-    </div>
-    
-    <div id="music-list" style="margin-top: 10px;">
-      <div class="empty">Loading music...</div>
-    </div>
-  `;
-  loadMusicList();
+
+  if (_newsItems.length > 0) {
+    renderSidebarNewsItem();
+    startNewsRotation();
+  }
 }
 
-verifyToken().then(() => render());
+function updateSnewsChar() {
+  const ta = document.getElementById('snews-ta');
+  const el = document.getElementById('snews-char');
+  if (!ta || !el) return;
+  const len = ta.value.length;
+  el.textContent = `${len} / 456`;
+  el.classList.toggle('warn', len > 400);
+}
+
+async function submitSidebarNews() {
+  const ta = document.getElementById('snews-ta');
+  const err = document.getElementById('snews-err');
+  if (!ta) return;
+  const text = ta.value.trim();
+  if (!text) { err.textContent = 'Write something first.'; return; }
+  if (_aeroPoints < 10) { err.textContent = `Need ${10 - _aeroPoints} more points.`; return; }
+  err.textContent = '';
+  const btn = document.querySelector('.snews-send-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '…'; }
+  const d = await api('POST', '/api/news', { content: text });
+  if (btn) { btn.disabled = false; btn.textContent = 'Send'; }
+  if (d.error) { err.textContent = d.error; return; }
+  ta.value = '';
+  updateSnewsChar();
+  _aeroPoints -= 10;
+  loadNewsSidebar();
+}
+
+// ── ONLINE PRESENCE ──────────────────────────────────────────
+let _onlinePingInterval = null;
+let _onlinePollInterval = null;
+
+function startOnlinePresence() {
+  // Ping immediately, then every 30s
+  api('POST', '/api/online/ping').catch(() => {});
+  if (_onlinePingInterval) clearInterval(_onlinePingInterval);
+  _onlinePingInterval = setInterval(() => {
+    api('POST', '/api/online/ping').catch(() => {});
+  }, 30000);
+
+  // Poll online users every 15s
+  fetchOnlineUsers();
+  if (_onlinePollInterval) clearInterval(_onlinePollInterval);
+  _onlinePollInterval = setInterval(fetchOnlineUsers, 15000);
+
+  // Remove from online on page close
+  window.addEventListener('beforeunload', () => {
+    navigator.sendBeacon && navigator.sendBeacon('/api/online/ping', null);
+    api('DELETE', '/api/online/ping').catch(() => {});
+  });
+}
+
+function stopOnlinePresence() {
+  if (_onlinePingInterval) { clearInterval(_onlinePingInterval); _onlinePingInterval = null; }
+  if (_onlinePollInterval) { clearInterval(_onlinePollInterval); _onlinePollInterval = null; }
+  if (token) api('DELETE', '/api/online/ping').catch(() => {});
+}
+
+async function fetchOnlineUsers() {
+  try {
+    const users = await api('GET', '/api/online/users');
+    renderOnlinePanel(Array.isArray(users) ? users : []);
+  } catch {}
+}
+
+function renderOnlinePanel(users) {
+  const body = document.getElementById('online-body');
+  const countEl = document.getElementById('online-count');
+  if (!body) return;
+  if (countEl) countEl.textContent = users.length;
+  if (!users.length) {
+    body.innerHTML = `<div class="online-empty">No one online</div>`;
+    return;
+  }
+  body.innerHTML = users.map(u =>
+    `<div class="online-user" onclick="goto('profile','${escHtml(u.username)}')">
+      <div class="online-dot${u.isMe ? ' me' : ''}"></div>
+      <span class="online-name${u.isMe ? ' me' : ''}">${escHtml(u.username)}${u.isMe ? ' (you)' : ''}</span>
+    </div>`
+  ).join('');
+}
+
+// ── NOTIFICATIONS ──────────────────────────────────────────
+
+async function loadNotifications() {
+  startOnlinePresence();
+  const content = document.getElementById('content');
+  if (!content) return;
+  content.innerHTML = `<div class="notif-empty">Loading…</div>`;
+
+  const notifs = await api('GET', '/api/notifications');
+
+  // Mark all as read
+  api('POST', '/api/notifications/read').catch(() => {});
+  updateNotifBadge(0);
+
+  if (!Array.isArray(notifs) || !notifs.length) {
+    content.innerHTML = `<div class="notif-empty">✨ You're all caught up!</div>`;
+    return;
+  }
+
+  const icons = { like: '❤️', comment: '💬', follow: '👤' };
+  const msgs = {
+    like: (n) => `<strong>${escHtml(n.from_username)}</strong> liked your post`,
+    comment: (n) => `<strong>${escHtml(n.from_username)}</strong> commented on your post`,
+    follow: (n) => `<strong onclick="event.stopPropagation();goto('profile','${escHtml(n.from_username)}')">${escHtml(n.from_username)}</strong> started following you`,
+  };
+
+  // Build onclick for each notification: like/comment go to the post, follow goes to profile
+  function notifOnclick(n) {
+    if ((n.type === 'like' || n.type === 'comment') && n.post_id) {
+      // The post belongs to *me* — navigate to my own profile and scroll to the post
+      return `onclick="gotoPost('${escHtml(me.username)}',${n.post_id})"`;
+    }
+    if (n.type === 'follow') {
+      return `onclick="goto('profile','${escHtml(n.from_username)}')"`;
+    }
+    return '';
+  }
+
+  content.innerHTML = `
+    <div class="notif-header">
+      <span class="notif-header-title">🔔 Notifications</span>
+    </div>
+    <div class="notif-list">
+      ${notifs.map(n => `
+        <div class="notif-item${n.is_read ? '' : ' unread'}${(n.type === 'like' || n.type === 'comment') && n.post_id ? ' notif-item-clickable' : ''}" ${notifOnclick(n)}>
+          <div class="notif-icon">${icons[n.type] || '🔔'}</div>
+          <div class="notif-body">
+            <div class="notif-text">${(msgs[n.type] || (() => escHtml(n.type)))(n)}</div>
+            <div class="notif-time">${timeAgo(n.created_at)}</div>
+          </div>
+          ${n.is_read ? '' : '<div class="notif-unread-dot"></div>'}
+        </div>`).join('')}
+    </div>`;
+}
+
+// ── NOTIFICATION TOASTS ──────────────────────────────────────
+let _notifBadgeInterval = null;
+let _lastSeenNotifId = null;
+const SOUND_URL = `https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/${GITHUB_BRANCH}/sound/sound.mp3`;
+
+const _notifIcons = { like: '❤️', comment: '💬', follow: '👤' };
+const _notifMsgs = {
+  like:    n => `<strong>${escHtml(n.from_username)}</strong> liked your post`,
+  comment: n => `<strong>${escHtml(n.from_username)}</strong> commented on your post`,
+  follow:  n => `<strong>${escHtml(n.from_username)}</strong> started following you`,
+};
+
+function playNotifSound() {
+  try {
+    const audio = new Audio(SOUND_URL);
+    audio.volume = 0.6;
+    audio.play().catch(() => {});
+  } catch {}
+}
+
+function showNotifToast(notif) {
+  const container = document.getElementById('notif-toast-container');
+  if (!container) return;
+
+  const toast = document.createElement('div');
+  toast.className = 'notif-toast';
+  toast.innerHTML = `
+    <div class="notif-toast-icon">${_notifIcons[notif.type] || '🔔'}</div>
+    <div class="notif-toast-body">
+      <div class="notif-toast-text">${(_notifMsgs[notif.type] || (() => escHtml(notif.type)))(notif)}</div>
+      <div class="notif-toast-sub">${timeAgo(notif.created_at)}</div>
+    </div>
+    <button class="notif-toast-close" title="Dismiss">×</button>
+    <div class="notif-toast-progress"></div>`;
+
+  toast.querySelector('.notif-toast-close').onclick = (e) => {
+    e.stopPropagation();
+    dismissToast(toast);
+  };
+  toast.onclick = () => {
+    dismissToast(toast);
+    if ((notif.type === 'like' || notif.type === 'comment') && notif.post_id) {
+      gotoPost(me.username, notif.post_id);
+    } else {
+      goto('notifications');
+    }
+  };
+
+  container.appendChild(toast);
+
+  const timer = setTimeout(() => dismissToast(toast), 6000);
+  toast._dismissTimer = timer;
+}
+
+function dismissToast(toast) {
+  if (toast._dismissed) return;
+  toast._dismissed = true;
+  clearTimeout(toast._dismissTimer);
+  toast.classList.add('dismissing');
+  toast.addEventListener('animationend', () => toast.remove(), { once: true });
+}
+
+function updateNotifBadge(count) {
+  const badge = document.getElementById('notif-badge');
+  if (!badge) return;
+  if (count > 0) {
+    badge.textContent = count > 9 ? '9+' : count;
+    badge.style.display = 'inline';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+async function pollNotifBadge() {
+  if (!token) return;
+  try {
+    const notifs = await api('GET', '/api/notifications');
+    if (!Array.isArray(notifs)) return;
+
+    const unread = notifs.filter(n => !n.is_read);
+    updateNotifBadge(unread.length);
+
+    // On first poll just record the latest ID — don't toast old ones
+    if (_lastSeenNotifId === null) {
+      _lastSeenNotifId = notifs.length ? notifs[0].id : 0;
+      return;
+    }
+
+    // Find truly new notifications since last poll
+    const newOnes = notifs.filter(n => n.id > _lastSeenNotifId);
+    if (newOnes.length > 0) {
+      _lastSeenNotifId = newOnes[0].id; // newOnes[0] is the latest (DESC order)
+      playNotifSound();
+      // Show a toast for each new one (cap at 3 to avoid spam)
+      newOnes.slice(0, 3).forEach(n => showNotifToast(n));
+    }
+  } catch {}
+}
+
+function startNotifBadgePolling() {
+  pollNotifBadge();
+  if (_notifBadgeInterval) clearInterval(_notifBadgeInterval);
+  _notifBadgeInterval = setInterval(pollNotifBadge, 15000);
+}
+
+verifyToken().then(() => { render(); startNotifBadgePolling(); });
 </script>
+
 </body>
 </html>
