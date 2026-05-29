@@ -1298,6 +1298,7 @@ async function submitComment(postId) {
   if (myAvatarEl && me?.avatar_url) {
     myAvatarEl.innerHTML = `<img src="${escHtml(me.avatar_url)}" alt="">`;
   }
+  registerActivity();
 }
 
 async function deleteComment(postId, commentId) {
@@ -1635,6 +1636,7 @@ async function submitPost() {
   ta.value = '';
   clearMedia();
   document.getElementById('posts').insertAdjacentHTML('afterbegin', renderPost(post));
+  registerActivity();
 }
 
 async function delPost(id) {
@@ -1656,15 +1658,32 @@ async function fetchPoints() {
     const d = await api('GET', '/api/me/points');
     if (typeof d.aero_points === 'number') {
       _aeroPoints = d.aero_points;
-      // Update sidebar display if visible
-      const el = document.getElementById('snews-pts-val');
-      if (el) el.textContent = _aeroPoints;
-      const hint = document.getElementById('snews-pts-hint');
-      if (hint) hint.textContent = _aeroPoints >= 10
-        ? '✨ Ready to send News!'
-        : `${10 - _aeroPoints} more to send News`;
+      _activityCount = d.activity_count ?? 0;
+      updatePointsDisplay();
     }
   } catch {}
+}
+
+function updatePointsDisplay(flash) {
+  const el = document.getElementById('snews-pts-val');
+  if (!el) return;
+  el.textContent = _aeroPoints;
+  if (flash) {
+    el.style.transition = 'transform .15s,opacity .15s';
+    el.style.transform = 'scale(1.35)';
+    el.style.opacity = '0.7';
+    setTimeout(() => { el.style.transform = 'scale(1)'; el.style.opacity = '1'; }, 160);
+  }
+}
+
+// Track activity locally to award points instantly without a round-trip
+let _activityCount = 0;
+function registerActivity() {
+  _activityCount++;
+  if (_activityCount % 2 === 0) {
+    _aeroPoints++;
+    updatePointsDisplay(true);
+  }
 }
 
 // kept for any legacy call — now a no-op div
@@ -1726,7 +1745,6 @@ async function loadNewsSidebar() {
     <div class="snews-points">
       <div class="snews-points-label">⭐ Aero-Points</div>
       <div class="snews-points-val" id="snews-pts-val">${_aeroPoints}</div>
-      <div class="snews-points-hint" id="snews-pts-hint">${hint}</div>
     </div>
 
     <div class="snews-wrap">
