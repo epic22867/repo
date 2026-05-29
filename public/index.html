@@ -763,10 +763,56 @@ div.profile-userbar{cursor:default}
       transition:background .12s;
     }
     .notif-mark-read:hover{background:rgba(100,175,245,0.18)}
+    /* NOTIFICATION TOAST POPUP */
+    #notif-toast-container{
+      position:fixed;top:60px;right:12px;z-index:9999;
+      display:flex;flex-direction:column;gap:8px;pointer-events:none;
+    }
+    .notif-toast{
+      pointer-events:all;
+      display:flex;align-items:center;gap:10px;
+      padding:11px 14px;border-radius:12px;min-width:220px;max-width:300px;
+      background:linear-gradient(180deg,rgba(255,255,255,0.96) 0%,rgba(210,235,255,0.92) 100%);
+      border:1px solid rgba(100,175,245,0.6);border-bottom-color:rgba(60,140,220,0.4);
+      box-shadow:0 6px 24px rgba(60,130,210,0.28),inset 0 1px 0 rgba(255,255,255,1);
+      backdrop-filter:blur(16px);
+      animation:toastIn .3s cubic-bezier(.2,.8,.3,1) forwards;
+      cursor:pointer;
+    }
+    .notif-toast.dismissing{
+      animation:toastOut .35s ease forwards;
+    }
+    @keyframes toastIn{
+      from{opacity:0;transform:translateX(60px) scale(.94)}
+      to{opacity:1;transform:translateX(0) scale(1)}
+    }
+    @keyframes toastOut{
+      from{opacity:1;transform:translateX(0) scale(1);max-height:80px;margin-bottom:0}
+      to{opacity:0;transform:translateX(60px) scale(.94);max-height:0;margin-bottom:-8px;padding-top:0;padding-bottom:0}
+    }
+    .notif-toast-icon{font-size:22px;flex-shrink:0}
+    .notif-toast-body{flex:1;min-width:0}
+    .notif-toast-text{font-size:12px;color:var(--text-dark);line-height:1.45;word-break:break-word}
+    .notif-toast-text strong{color:var(--aero-blue)}
+    .notif-toast-sub{font-size:10.5px;color:var(--text-light);margin-top:2px}
+    .notif-toast-progress{
+      position:absolute;bottom:0;left:0;height:3px;border-radius:0 0 12px 12px;
+      background:linear-gradient(90deg,rgba(60,140,225,0.7),rgba(100,175,245,0.5));
+      animation:toastProgress 6s linear forwards;
+      width:100%;
+    }
+    .notif-toast{position:relative;overflow:hidden}
+    @keyframes toastProgress{from{width:100%}to{width:0%}}
+    .notif-toast-close{
+      font-size:14px;color:#aac8e0;background:none;border:none;cursor:pointer;
+      padding:0 0 0 4px;line-height:1;flex-shrink:0;transition:color .12s;
+    }
+    .notif-toast-close:hover{color:#5a9fd4}
   </style>
 </head>
 <body>
 <div id="app"></div>
+<div id="notif-toast-container"></div>
 
 <script>
 const GITHUB_USER = 'epic22867';
@@ -1976,7 +2022,6 @@ function renderOnlinePanel(users) {
 }
 
 // ── NOTIFICATIONS ──────────────────────────────────────────
-let _notifBadgeInterval = null;
 
 async function loadNotifications() {
   startOnlinePresence();
@@ -2019,6 +2064,61 @@ async function loadNotifications() {
     </div>`;
 }
 
+// ── NOTIFICATION TOASTS ──────────────────────────────────────
+let _notifBadgeInterval = null;
+let _lastSeenNotifId = null;
+const SOUND_URL = `https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/${GITHUB_BRANCH}/sound/sound.mp3`;
+
+const _notifIcons = { like: '❤️', comment: '💬', follow: '👤' };
+const _notifMsgs = {
+  like:    n => `<strong>${escHtml(n.from_username)}</strong> liked your post`,
+  comment: n => `<strong>${escHtml(n.from_username)}</strong> commented on your post`,
+  follow:  n => `<strong>${escHtml(n.from_username)}</strong> started following you`,
+};
+
+function playNotifSound() {
+  try {
+    const audio = new Audio(SOUND_URL);
+    audio.volume = 0.6;
+    audio.play().catch(() => {});
+  } catch {}
+}
+
+function showNotifToast(notif) {
+  const container = document.getElementById('notif-toast-container');
+  if (!container) return;
+
+  const toast = document.createElement('div');
+  toast.className = 'notif-toast';
+  toast.innerHTML = `
+    <div class="notif-toast-icon">${_notifIcons[notif.type] || '🔔'}</div>
+    <div class="notif-toast-body">
+      <div class="notif-toast-text">${(_notifMsgs[notif.type] || (() => escHtml(notif.type)))(notif)}</div>
+      <div class="notif-toast-sub">${timeAgo(notif.created_at)}</div>
+    </div>
+    <button class="notif-toast-close" title="Dismiss">×</button>
+    <div class="notif-toast-progress"></div>`;
+
+  toast.querySelector('.notif-toast-close').onclick = (e) => {
+    e.stopPropagation();
+    dismissToast(toast);
+  };
+  toast.onclick = () => { goto('notifications'); dismissToast(toast); };
+
+  container.appendChild(toast);
+
+  const timer = setTimeout(() => dismissToast(toast), 6000);
+  toast._dismissTimer = timer;
+}
+
+function dismissToast(toast) {
+  if (toast._dismissed) return;
+  toast._dismissed = true;
+  clearTimeout(toast._dismissTimer);
+  toast.classList.add('dismissing');
+  toast.addEventListener('animationend', () => toast.remove(), { once: true });
+}
+
 function updateNotifBadge(count) {
   const badge = document.getElementById('notif-badge');
   if (!badge) return;
@@ -2033,15 +2133,33 @@ function updateNotifBadge(count) {
 async function pollNotifBadge() {
   if (!token) return;
   try {
-    const d = await api('GET', '/api/notifications/unread-count');
-    updateNotifBadge(d?.count || 0);
+    const notifs = await api('GET', '/api/notifications');
+    if (!Array.isArray(notifs)) return;
+
+    const unread = notifs.filter(n => !n.is_read);
+    updateNotifBadge(unread.length);
+
+    // On first poll just record the latest ID — don't toast old ones
+    if (_lastSeenNotifId === null) {
+      _lastSeenNotifId = notifs.length ? notifs[0].id : 0;
+      return;
+    }
+
+    // Find truly new notifications since last poll
+    const newOnes = notifs.filter(n => n.id > _lastSeenNotifId);
+    if (newOnes.length > 0) {
+      _lastSeenNotifId = newOnes[0].id; // newOnes[0] is the latest (DESC order)
+      playNotifSound();
+      // Show a toast for each new one (cap at 3 to avoid spam)
+      newOnes.slice(0, 3).forEach(n => showNotifToast(n));
+    }
   } catch {}
 }
 
 function startNotifBadgePolling() {
   pollNotifBadge();
   if (_notifBadgeInterval) clearInterval(_notifBadgeInterval);
-  _notifBadgeInterval = setInterval(pollNotifBadge, 30000);
+  _notifBadgeInterval = setInterval(pollNotifBadge, 15000);
 }
 
 verifyToken().then(() => { render(); startNotifBadgePolling(); });
