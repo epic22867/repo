@@ -66,6 +66,20 @@ await pool.query(`
     expires_at TIMESTAMPTZ NOT NULL,
     reason TEXT DEFAULT ''
   );
+
+  CREATE TABLE IF NOT EXISTS likes (
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    post_id INTEGER REFERENCES posts(id) ON DELETE CASCADE,
+    PRIMARY KEY (user_id, post_id)
+  );
+
+  CREATE TABLE IF NOT EXISTS comments (
+    id SERIAL PRIMARY KEY,
+    post_id INTEGER REFERENCES posts(id) ON DELETE CASCADE,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    content TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  );
 `);
 
 // In-memory rate limit tracker: userId -> array of post timestamps (ms)
@@ -165,33 +179,37 @@ app.post('/api/login', async (req, res) => {
 
 app.get('/api/feed', auth, async (req, res) => {
   const { rows } = await pool.query(`
-    SELECT p.*, u.username,
-           u.accent_color,
-           u.banner_url
+    SELECT p.*, u.username, u.accent_color, u.banner_url,
+           COUNT(DISTINCT l.user_id)::int AS like_count,
+           BOOL_OR(l.user_id = $1) AS liked,
+           COUNT(DISTINCT c.id)::int AS comment_count
     FROM posts p
     JOIN users u ON u.id = p.user_id
+    LEFT JOIN likes l ON l.post_id = p.id
+    LEFT JOIN comments c ON c.post_id = p.id
     WHERE p.user_id = $1
-       OR p.user_id IN (
-          SELECT following FROM follows WHERE follower = $1
-       )
+       OR p.user_id IN (SELECT following FROM follows WHERE follower = $1)
+    GROUP BY p.id, u.username, u.accent_color, u.banner_url
     ORDER BY p.id DESC
     LIMIT 100
   `, [req.user.id]);
-
   res.json(rows);
 });
 
 app.get('/api/explore', auth, async (req, res) => {
   const { rows } = await pool.query(`
-    SELECT p.*, u.username,
-           u.accent_color,
-           u.banner_url
+    SELECT p.*, u.username, u.accent_color, u.banner_url,
+           COUNT(DISTINCT l.user_id)::int AS like_count,
+           BOOL_OR(l.user_id = $1) AS liked,
+           COUNT(DISTINCT c.id)::int AS comment_count
     FROM posts p
     JOIN users u ON u.id = p.user_id
+    LEFT JOIN likes l ON l.post_id = p.id
+    LEFT JOIN comments c ON c.post_id = p.id
+    GROUP BY p.id, u.username, u.accent_color, u.banner_url
     ORDER BY p.id DESC
     LIMIT 50
-  `);
-
+  `, [req.user.id]);
   res.json(rows);
 });
 
@@ -306,6 +324,55 @@ app.post('/api/posts', auth, async (req, res) => {
   res.json({ ...rows[0], username: req.user.username });
 });
 
+// ── LIKES ────────────────────────────────────────────────────
+app.post('/api/posts/:id/like', auth, async (req, res) => {
+  const postId = parseInt(req.params.id);
+  const userId = req.user.id;
+  const { rows } = await pool.query(
+    'SELECT 1 FROM likes WHERE user_id=$1 AND post_id=$2', [userId, postId]
+  );
+  if (rows.length) {
+    await pool.query('DELETE FROM likes WHERE user_id=$1 AND post_id=$2', [userId, postId]);
+  } else {
+    await pool.query('INSERT INTO likes (user_id, post_id) VALUES ($1,$2) ON CONFLICT DO NOTHING', [userId, postId]);
+  }
+  const { rows: cnt } = await pool.query(
+    'SELECT COUNT(*)::int AS like_count FROM likes WHERE post_id=$1', [postId]
+  );
+  res.json({ liked: !rows.length, like_count: cnt[0].like_count });
+});
+
+// ── COMMENTS ─────────────────────────────────────────────────
+app.get('/api/posts/:id/comments', auth, async (req, res) => {
+  const { rows } = await pool.query(`
+    SELECT c.*, u.username, u.avatar_url, u.accent_color
+    FROM comments c
+    JOIN users u ON u.id = c.user_id
+    WHERE c.post_id = $1
+    ORDER BY c.id ASC
+  `, [parseInt(req.params.id)]);
+  res.json(rows);
+});
+
+app.post('/api/posts/:id/comments', auth, async (req, res) => {
+  const content = (req.body.content || '').trim().slice(0, 500);
+  if (!content) return res.status(400).json({ error: 'Empty comment' });
+  const { rows } = await pool.query(
+    `INSERT INTO comments (post_id, user_id, content)
+     VALUES ($1, $2, $3) RETURNING *`,
+    [parseInt(req.params.id), req.user.id, content]
+  );
+  res.json({ ...rows[0], username: req.user.username, avatar_url: req.user.avatar_url || '', accent_color: req.user.accent_color || '#4da3ff' });
+});
+
+app.delete('/api/comments/:id', auth, async (req, res) => {
+  await pool.query(
+    'DELETE FROM comments WHERE id=$1 AND user_id=$2',
+    [parseInt(req.params.id), req.user.id]
+  );
+  res.json({ ok: true });
+});
+
 app.delete('/api/posts/:id', auth, async (req, res) => {
   await pool.query(
     'DELETE FROM posts WHERE id=$1 AND user_id=$2',
@@ -338,7 +405,17 @@ app.get('/api/users/:username', auth, async (req, res) => {
   const user = rows[0];
 
   const [postsR, followersR, followingR, isFollowingR] = await Promise.all([
-    pool.query('SELECT * FROM posts WHERE user_id=$1 ORDER BY id DESC', [user.id]),
+    pool.query(`
+      SELECT p.*, COUNT(DISTINCT l.user_id)::int AS like_count,
+             BOOL_OR(l.user_id = $2) AS liked,
+             COUNT(DISTINCT c.id)::int AS comment_count
+      FROM posts p
+      LEFT JOIN likes l ON l.post_id = p.id
+      LEFT JOIN comments c ON c.post_id = p.id
+      WHERE p.user_id = $1
+      GROUP BY p.id
+      ORDER BY p.id DESC
+    `, [user.id, req.user.id]),
     pool.query('SELECT COUNT(*) FROM follows WHERE following=$1', [user.id]),
     pool.query('SELECT COUNT(*) FROM follows WHERE follower=$1', [user.id]),
     pool.query('SELECT 1 FROM follows WHERE follower=$1 AND following=$2', [req.user.id, user.id])
