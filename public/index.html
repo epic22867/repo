@@ -266,6 +266,78 @@
     .post-content{line-height:1.65;color:var(--text-dark);white-space:pre-wrap;word-break:break-word}
     .post-del{float:right;background:none;border:none;cursor:pointer;color:#aac8e0;font-size:17px;line-height:1;margin-left:8px;transition:color .15s}
     .post-del:hover{color:#c0392b}
+
+    /* POST ACTIONS — like & comment */
+    .post-actions{
+      display:flex;align-items:center;gap:6px;margin-top:10px;
+      padding-top:8px;border-top:1px solid rgba(140,195,240,0.2);
+    }
+    .action-btn{
+      display:flex;align-items:center;gap:4px;
+      background:none;border:none;cursor:pointer;font-family:inherit;
+      font-size:11.5px;font-weight:600;color:var(--text-light);
+      padding:4px 8px;border-radius:10px;transition:all .15s;
+    }
+    .action-btn:hover{background:rgba(100,175,245,0.12);color:var(--aero-blue)}
+    .action-btn.liked{color:#e05080;}
+    .action-btn.liked:hover{background:rgba(220,80,120,0.1);color:#c03060}
+    .like-heart{font-size:14px;transition:transform .18s;}
+    .action-btn.liked .like-heart{animation:heartPop .25s ease;}
+    @keyframes heartPop{0%{transform:scale(1)}50%{transform:scale(1.45)}100%{transform:scale(1)}}
+    .action-count{font-size:11px;min-width:10px}
+
+    /* COMMENTS SECTION */
+    .comments-section{
+      margin-top:8px;padding-top:8px;
+      border-top:1px solid rgba(140,195,240,0.18);
+      animation:fadeUp .18s ease;
+    }
+    .comment{
+      display:flex;gap:8px;margin-bottom:7px;align-items:flex-start;
+    }
+    .comment-avatar{
+      width:24px;height:24px;border-radius:50%;flex-shrink:0;
+      background:linear-gradient(135deg,rgba(120,185,245,0.9),rgba(50,130,220,0.85));
+      border:1px solid rgba(255,255,255,0.8);
+      display:flex;align-items:center;justify-content:center;
+      font-size:10px;font-weight:700;color:#fff;overflow:hidden;
+    }
+    .comment-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+    .comment-body{flex:1;min-width:0;}
+    .comment-meta{display:flex;align-items:baseline;gap:6px;margin-bottom:2px}
+    .comment-user{
+      font-size:11.5px;font-weight:700;color:var(--aero-blue);cursor:pointer;
+    }
+    .comment-user:hover{text-decoration:underline}
+    .comment-time{font-size:10px;color:var(--text-light)}
+    .comment-text{font-size:12px;color:var(--text-dark);line-height:1.5;word-break:break-word;white-space:pre-wrap}
+    .comment-del{
+      background:none;border:none;cursor:pointer;color:#c0d8e8;font-size:13px;
+      padding:0 2px;line-height:1;transition:color .12s;margin-left:4px;flex-shrink:0;
+    }
+    .comment-del:hover{color:#c0392b}
+    .comment-input-row{
+      display:flex;gap:6px;margin-top:6px;align-items:center;
+    }
+    .comment-input{
+      flex:1;padding:6px 10px;font-family:inherit;font-size:12px;border-radius:14px;
+      background:rgba(220,238,255,0.5);border:1px solid rgba(140,195,240,0.5);
+      color:var(--text-dark);outline:none;max-width:100%;width:100%;
+      transition:border .12s,box-shadow .12s;
+    }
+    .comment-input:focus{border-color:rgba(60,140,220,0.7);box-shadow:0 0 0 2px rgba(80,160,240,0.14)}
+    .comment-submit{
+      padding:6px 12px;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;
+      border-radius:14px;border:1px solid rgba(30,100,200,0.4);color:#fff;
+      background:linear-gradient(180deg,rgba(100,175,245,0.95) 0%,rgba(50,130,220,0.9) 100%);
+      transition:all .12s;white-space:nowrap;flex-shrink:0;
+    }
+    .comment-submit:hover{box-shadow:0 2px 8px rgba(30,100,200,0.3)}
+    .comments-load-more{
+      font-size:11px;color:var(--aero-blue);cursor:pointer;background:none;border:none;
+      font-family:inherit;padding:2px 0;font-weight:600;
+    }
+    .comments-load-more:hover{text-decoration:underline}
 /* PROFILE — two-column layout */
 .profile-layout{
   display:flex;flex-direction:row;align-items:flex-start;
@@ -933,6 +1005,9 @@ function renderPost(p) {
     }
   }
   const contentHtml = p.content ? `<div class="post-content">${renderEmojiText(p.content)}</div>` : '';
+  const liked = p.liked || false;
+  const likeCount = p.like_count || 0;
+  const commentCount = p.comment_count || 0;
   return `<div class="post" id="post-${p.id}">
     ${del}
     <div class="post-meta">
@@ -941,7 +1016,131 @@ function renderPost(p) {
     </div>
     ${contentHtml}
     ${media}
+    <div class="post-actions">
+      <button class="action-btn ${liked ? 'liked' : ''}" id="like-btn-${p.id}" onclick="toggleLike(${p.id})">
+        <span class="like-heart">${liked ? '❤️' : '🤍'}</span>
+        <span class="action-count" id="like-count-${p.id}">${likeCount > 0 ? likeCount : ''}</span>
+      </button>
+      <button class="action-btn" onclick="toggleComments(${p.id})">
+        <span>💬</span>
+        <span class="action-count" id="comment-count-${p.id}">${commentCount > 0 ? commentCount : ''}</span>
+      </button>
+    </div>
+    <div class="comments-section" id="comments-${p.id}" style="display:none"></div>
   </div>`;
+}
+
+// ── LIKES ─────────────────────────────────────────────────────
+async function toggleLike(postId) {
+  const btn = document.getElementById(`like-btn-${postId}`);
+  const countEl = document.getElementById(`like-count-${postId}`);
+  const isLiked = btn.classList.contains('liked');
+  // Optimistic UI
+  btn.classList.toggle('liked', !isLiked);
+  btn.querySelector('.like-heart').textContent = isLiked ? '🤍' : '❤️';
+  const d = await api('POST', `/api/posts/${postId}/like`);
+  if (d.error) {
+    // Revert on error
+    btn.classList.toggle('liked', isLiked);
+    btn.querySelector('.like-heart').textContent = isLiked ? '❤️' : '🤍';
+    return;
+  }
+  btn.classList.toggle('liked', d.liked);
+  btn.querySelector('.like-heart').textContent = d.liked ? '❤️' : '🤍';
+  countEl.textContent = d.like_count > 0 ? d.like_count : '';
+}
+
+// ── COMMENTS ──────────────────────────────────────────────────
+const _commentsOpen = new Set(); // postIds with comments visible
+
+async function toggleComments(postId) {
+  const section = document.getElementById(`comments-${postId}`);
+  if (!section) return;
+  if (_commentsOpen.has(postId)) {
+    _commentsOpen.delete(postId);
+    section.style.display = 'none';
+    section.innerHTML = '';
+  } else {
+    _commentsOpen.add(postId);
+    section.style.display = 'block';
+    await loadComments(postId);
+  }
+}
+
+async function loadComments(postId) {
+  const section = document.getElementById(`comments-${postId}`);
+  if (!section) return;
+  section.innerHTML = `<div style="font-size:11px;color:var(--text-light);padding:4px 0">Loading…</div>`;
+  const comments = await api('GET', `/api/posts/${postId}/comments`);
+  if (!Array.isArray(comments)) { section.innerHTML = ''; return; }
+  renderComments(postId, comments);
+}
+
+function renderComments(postId, comments) {
+  const section = document.getElementById(`comments-${postId}`);
+  if (!section) return;
+  // Update comment count badge
+  const countEl = document.getElementById(`comment-count-${postId}`);
+  if (countEl) countEl.textContent = comments.length > 0 ? comments.length : '';
+
+  const list = comments.map(c => renderComment(postId, c)).join('');
+  section.innerHTML = `
+    <div id="comment-list-${postId}">${list || `<div style="font-size:11px;color:var(--text-light);padding:2px 0 6px">No comments yet</div>`}</div>
+    <div class="comment-input-row">
+      <div class="comment-avatar">${me?.avatar_url ? `<img src="${escHtml(me.avatar_url)}" alt="">` : getInitial(me?.username)}</div>
+      <input class="comment-input" id="comment-input-${postId}" placeholder="Add a comment…" maxlength="500"
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();submitComment(${postId})}">
+      <button class="comment-submit" onclick="submitComment(${postId})">Send</button>
+    </div>`;
+}
+
+function renderComment(postId, c) {
+  const canDel = c.user_id === me?.id;
+  const avatar = c.avatar_url
+    ? `<img src="${escHtml(c.avatar_url)}" alt="">`
+    : getInitial(c.username);
+  return `<div class="comment" id="comment-item-${c.id}">
+    <div class="comment-avatar">${avatar}</div>
+    <div class="comment-body">
+      <div class="comment-meta">
+        <span class="comment-user" onclick="goto('profile','${escHtml(c.username)}')">${escHtml(c.username)}</span>
+        <span class="comment-time">${timeAgo(c.created_at)}</span>
+        ${canDel ? `<button class="comment-del" onclick="deleteComment(${postId},${c.id})" title="Delete">×</button>` : ''}
+      </div>
+      <div class="comment-text">${renderEmojiText(c.content)}</div>
+    </div>
+  </div>`;
+}
+
+async function submitComment(postId) {
+  const input = document.getElementById(`comment-input-${postId}`);
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  const c = await api('POST', `/api/posts/${postId}/comments`, { content: text });
+  if (c.error) { input.value = text; return; }
+  const list = document.getElementById(`comment-list-${postId}`);
+  if (list) {
+    // Remove "no comments" placeholder if present
+    if (list.querySelector('div')) list.innerHTML = '';
+    list.insertAdjacentHTML('beforeend', renderComment(postId, c));
+  }
+  // Update counter
+  const countEl = document.getElementById(`comment-count-${postId}`);
+  if (countEl) {
+    const cur = parseInt(countEl.textContent) || 0;
+    countEl.textContent = cur + 1;
+  }
+}
+
+async function deleteComment(postId, commentId) {
+  await api('DELETE', `/api/comments/${commentId}`);
+  document.getElementById(`comment-item-${commentId}`)?.remove();
+  const countEl = document.getElementById(`comment-count-${postId}`);
+  if (countEl) {
+    const cur = parseInt(countEl.textContent) || 1;
+    countEl.textContent = cur - 1 > 0 ? cur - 1 : '';
+  }
 }
 
 let _pendingMedia = null; // { dataUrl, type }
