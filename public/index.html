@@ -281,6 +281,14 @@
       font-weight:700;
     }
     .username-fokzzah:hover{filter:drop-shadow(0 0 6px rgba(0,200,200,0.55));}
+    /* ось special gradient nick */
+    .username-os{
+      background:linear-gradient(90deg,#7a9e7e 0%,#5f8c6a 30%,#8aab8a 60%,#6b8f72 100%);
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+      filter:drop-shadow(0 0 4px rgba(100,140,100,0.35));
+      font-weight:700;
+    }
+    .username-os:hover{filter:drop-shadow(0 0 6px rgba(110,150,110,0.55));}
     .post-time{font-size:10.5px;color:var(--text-light)}
     .post-content{line-height:1.65;color:var(--text-dark);white-space:pre-wrap;word-break:break-word}
     .post-del{float:right;background:none;border:none;cursor:pointer;color:#aac8e0;font-size:17px;line-height:1;margin-left:8px;transition:color .15s}
@@ -887,6 +895,7 @@ function escHtml(s) {
 function usernameHtml(u) {
   const escaped = escHtml(u);
   if (u === 'Fokzzah') return `<span class="username-fokzzah">${escaped}</span>`;
+  if (u === 'ось') return `<span class="username-os">${escaped}</span>`;
   return escaped;
 }
 
