@@ -271,6 +271,22 @@
     .post-del{float:right;background:none;border:none;cursor:pointer;color:#aac8e0;font-size:17px;line-height:1;margin-left:8px;transition:color .15s}
     .post-del:hover{color:#c0392b}
 
+    /* PIN BUTTON & BADGE */
+    .post-pin{
+      float:right;background:none;border:none;cursor:pointer;
+      color:#aac8e0;font-size:15px;line-height:1;margin-left:4px;
+      transition:color .15s;
+    }
+    .post-pin:hover{color:#1e6bbf}
+    .post-pin.pinned{color:#f0a030}
+    .pinned-badge{
+      display:inline-flex;align-items:center;gap:4px;
+      font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+      color:#a07010;background:rgba(255,200,80,0.22);
+      border:1px solid rgba(220,160,30,0.35);border-radius:6px;
+      padding:2px 7px;margin-bottom:5px;
+    }
+
     /* POST ACTIONS — like & comment */
     .post-actions{
       display:flex;align-items:center;gap:6px;margin-top:10px;
@@ -1160,7 +1176,7 @@ async function loadProfile(username) {
       ).join('')}
     </div>` : ''}
     <div class="profile-post-shell" id="profile-posts">
-      ${d.posts.length ? d.posts.map(p => renderPost({ ...p, username })).join('') : `<div class="empty">No posts yet.</div>`}
+      ${d.posts.length ? d.posts.map(p => renderPost({ ...p, username }, { pinnedPostId: d.pinned_post_id, isOwner: isMe })).join('') : `<div class="empty">No posts yet.</div>`}
     </div>`;
   applyProfileMedia(content);
   applyWidgetImages(content);
@@ -1270,10 +1286,26 @@ async function toggleFollow(id) {
   loadProfile(profileUser);
 }
 
-function renderPost(p) {
+async function togglePin(postId, currentlyPinned) {
+  if (currentlyPinned) {
+    await api('DELETE', '/api/me/pin');
+  } else {
+    await api('POST', '/api/me/pin/' + postId);
+  }
+  // Reload profile to re-render with updated pin state
+  loadProfile(profileUser);
+}
+
+function renderPost(p, opts = {}) {
+  const { pinnedPostId = null, isOwner = false } = opts;
+  const isPinned = pinnedPostId === p.id;
   const del = p.user_id === me?.id
     ? `<button class="post-del" onclick="delPost(${p.id},this)" title="Delete">×</button>`
     : '';
+  const pinBtn = isOwner
+    ? `<button class="post-pin${isPinned ? ' pinned' : ''}" onclick="togglePin(${p.id},${isPinned})" title="${isPinned ? 'Unpin post' : 'Pin to profile'}">📌</button>`
+    : '';
+  const pinnedBadge = isPinned ? `<div class="pinned-badge">📌 Pinned</div>` : '';
   let media = '';
   if (p.media_url) {
     if (p.media_type === 'video/mp4') {
@@ -1289,7 +1321,8 @@ function renderPost(p) {
   const likeCount = p.like_count || 0;
   const commentCount = p.comment_count || 0;
   return `<div class="post" id="post-${p.id}">
-    ${del}
+    ${del}${pinBtn}
+    ${pinnedBadge}
     <div class="post-meta">
       <span class="post-user" onclick="goto('profile','${escHtml(p.username)}')">${escHtml(p.username)}</span>
       <span class="post-time">${timeAgo(p.created_at)}</span>
