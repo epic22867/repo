@@ -273,6 +273,14 @@
     .post-meta{display:flex;align-items:baseline;gap:10px;margin-bottom:7px}
     .post-user{font-weight:700;cursor:pointer;color:var(--aero-blue);font-size:13px;transition:color .1s}
     .post-user:hover{color:var(--aero-blue2);text-decoration:underline}
+    /* Fokzzah special gradient nick */
+    .username-fokzzah{
+      background:linear-gradient(90deg,#00c6c6 0%,#00b4d8 35%,#0096c7 60%,#00b894 100%);
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+      filter:drop-shadow(0 0 4px rgba(0,180,180,0.35));
+      font-weight:700;
+    }
+    .username-fokzzah:hover{filter:drop-shadow(0 0 6px rgba(0,200,200,0.55));}
     .post-time{font-size:10.5px;color:var(--text-light)}
     .post-content{line-height:1.65;color:var(--text-dark);white-space:pre-wrap;word-break:break-word}
     .post-del{float:right;background:none;border:none;cursor:pointer;color:#aac8e0;font-size:17px;line-height:1;margin-left:8px;transition:color .15s}
@@ -875,6 +883,12 @@ function escHtml(s) {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 }
+// Returns username HTML with a special teal-cyan gradient for Fokzzah
+function usernameHtml(u) {
+  const escaped = escHtml(u);
+  if (u === 'Fokzzah') return `<span class="username-fokzzah">${escaped}</span>`;
+  return escaped;
+}
 
 function normalizeUserbars(input) {
   let ubs = input;
@@ -1167,7 +1181,7 @@ async function loadProfile(username) {
           <div class="profile-hero">
             <div class="profile-body">
               <div class="profile-avatar">${d.avatar_url ? `<img src="${escHtml(d.avatar_url)}" alt="avatar" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : getInitial(d.username)}</div>
-              <div class="profile-name">${escHtml(d.username)}</div>
+              <div class="profile-name">${usernameHtml(d.username)}</div>
               ${d.bio ? `<div class="profile-bio">${escHtml(d.bio)}</div>` : ''}
               <div class="profile-stats">
                 <div class="stat"><strong>${d.posts.length}</strong>posts</div>
@@ -1354,7 +1368,7 @@ function renderPost(p, opts = {}) {
     ${del}${pinBtn}
     ${pinnedBadge}
     <div class="post-meta">
-      <span class="post-user" onclick="goto('profile','${escHtml(p.username)}')">${escHtml(p.username)}</span>
+      <span class="post-user" onclick="goto('profile','${escHtml(p.username)}')">${usernameHtml(p.username)}</span>
       <span class="post-time">${timeAgo(p.created_at)}</span>
     </div>
     ${contentHtml}
@@ -1479,7 +1493,7 @@ function renderComment(postId, c) {
     <div class="comment-avatar">${avatar}</div>
     <div class="comment-body">
       <div class="comment-meta">
-        <span class="comment-user" onclick="goto('profile','${escHtml(c.username)}')">${escHtml(c.username)}</span>
+        <span class="comment-user" onclick="goto('profile','${escHtml(c.username)}')">${usernameHtml(c.username)}</span>
         <span class="comment-time">${timeAgo(c.created_at)}</span>
         ${canDel ? `<button class="comment-del" onclick="deleteComment(${postId},${c.id})" title="Delete">×</button>` : ''}
       </div>
@@ -1934,7 +1948,7 @@ function renderSidebarNewsItem() {
       ).join('')}</div>`
     : '';
   body.innerHTML = `<div class="snews-item">
-    <div class="snews-item-user" onclick="goto('profile','${escHtml(item.username)}')" title="${escHtml(item.username)}">${escHtml(item.username)}</div>
+    <div class="snews-item-user" onclick="goto('profile','${escHtml(item.username)}')" title="${escHtml(item.username)}">${usernameHtml(item.username)}</div>
     <div class="snews-item-text">${escHtml(item.content)}</div>
     <div class="snews-item-time">${timeAgo(item.created_at)}</div>
     ${dotsHtml}
@@ -2079,7 +2093,7 @@ function renderOnlinePanel(users) {
   body.innerHTML = users.map(u =>
     `<div class="online-user" onclick="goto('profile','${escHtml(u.username)}')">
       <div class="online-dot${u.isMe ? ' me' : ''}"></div>
-      <span class="online-name${u.isMe ? ' me' : ''}">${escHtml(u.username)}${u.isMe ? ' (you)' : ''}</span>
+      <span class="online-name${u.isMe ? ' me' : ''}">${usernameHtml(u.username)}${u.isMe ? ' (you)' : ''}</span>
     </div>`
   ).join('');
 }
@@ -2105,9 +2119,9 @@ async function loadNotifications() {
 
   const icons = { like: '❤️', comment: '💬', follow: '👤' };
   const msgs = {
-    like: (n) => `<strong>${escHtml(n.from_username)}</strong> liked your post`,
-    comment: (n) => `<strong>${escHtml(n.from_username)}</strong> commented on your post`,
-    follow: (n) => `<strong onclick="event.stopPropagation();goto('profile','${escHtml(n.from_username)}')">${escHtml(n.from_username)}</strong> started following you`,
+    like: (n) => `<strong>${usernameHtml(n.from_username)}</strong> liked your post`,
+    comment: (n) => `<strong>${usernameHtml(n.from_username)}</strong> commented on your post`,
+    follow: (n) => `<strong onclick="event.stopPropagation();goto('profile','${escHtml(n.from_username)}')">${usernameHtml(n.from_username)}</strong> started following you`,
   };
 
   // Build onclick for each notification: like/comment go to the post, follow goes to profile
@@ -2146,9 +2160,9 @@ const SOUND_URL = `https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REP
 
 const _notifIcons = { like: '❤️', comment: '💬', follow: '👤' };
 const _notifMsgs = {
-  like:    n => `<strong>${escHtml(n.from_username)}</strong> liked your post`,
-  comment: n => `<strong>${escHtml(n.from_username)}</strong> commented on your post`,
-  follow:  n => `<strong>${escHtml(n.from_username)}</strong> started following you`,
+  like:    n => `<strong>${usernameHtml(n.from_username)}</strong> liked your post`,
+  comment: n => `<strong>${usernameHtml(n.from_username)}</strong> commented on your post`,
+  follow:  n => `<strong>${usernameHtml(n.from_username)}</strong> started following you`,
 };
 
 function playNotifSound() {
