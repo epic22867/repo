@@ -297,6 +297,14 @@
       font-weight:700;
     }
     .username-florence:hover{filter:drop-shadow(0 0 6px rgba(0,200,160,0.55));}
+    /* Omlette special gradient nick */
+    .username-omlette{
+      background:linear-gradient(90deg,#ff6b6b 0%,#e84040 35%,#c0392b 65%,#961a1a 100%);
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+      filter:drop-shadow(0 0 4px rgba(200,50,50,0.35));
+      font-weight:700;
+    }
+    .username-omlette:hover{filter:drop-shadow(0 0 6px rgba(220,60,60,0.55));}
     .post-time{font-size:10.5px;color:var(--text-light)}
     .post-content{line-height:1.65;color:var(--text-dark);white-space:pre-wrap;word-break:break-word}
     .post-del{float:right;background:none;border:none;cursor:pointer;color:#aac8e0;font-size:17px;line-height:1;margin-left:8px;transition:color .15s}
@@ -905,6 +913,7 @@ function usernameHtml(u) {
   if (u === 'Fokzzah') return `<span class="username-fokzzah">${escaped}</span>`;
   if (u === 'ось') return `<span class="username-os">${escaped}</span>`;
   if (u === 'Florence') return `<span class="username-florence">${escaped}</span>`;
+  if (u === 'Omlette') return `<span class="username-omlette">${escaped}</span>`;
   return escaped;
 }
 
